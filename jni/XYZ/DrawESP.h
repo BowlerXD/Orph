@@ -595,13 +595,13 @@ static inline void DrawObjectiveAlertCard(ImDrawList *draw, int objectiveId, int
     const char *alertText = isLord ? "LORD IS UNDER ATTACK" : "TURTLE IS UNDER ATTACK";
 
     // Place alert above the minimap zoom icon (right side of minimap).
-    const float gapX = 12.0f;
     float cardWidth = std::clamp(screenWidth * 0.22f, 240.0f, 420.0f);
     float cardHeight = std::clamp(screenHeight * 0.09f, 60.0f, 120.0f);
     ImVec2 cardSize(cardWidth, cardHeight);
-    const float zoomAnchorX = minimapPosX + minimapWidth + std::clamp(minimapWidth * 0.07f, 16.0f, 30.0f);
+    const float zoomAnchorX = minimapPosX + minimapWidth + std::clamp(minimapWidth * 0.05f, 10.0f, 20.0f);
     const float zoomAnchorY = minimapPosY + minimapHeight * 0.50f;
-    ImVec2 cardTopLeft(zoomAnchorX + gapX, zoomAnchorY - cardSize.y - std::clamp(cardSize.y * 0.14f, 10.0f, 18.0f));
+    // Stick card to the right edge of minimap (no visual horizontal gap).
+    ImVec2 cardTopLeft(minimapPosX + minimapWidth - 2.0f, zoomAnchorY - cardSize.y - std::clamp(cardSize.y * 0.14f, 10.0f, 18.0f));
     ImVec2 cardBottomRight(cardTopLeft.x + cardSize.x, cardTopLeft.y + cardSize.y);
 
     // Bubble-style panel: rounded main body + pointer tail to minimap zoom area.
@@ -613,7 +613,7 @@ static inline void DrawObjectiveAlertCard(ImDrawList *draw, int objectiveId, int
 
     const float tailHalfHeight = std::clamp(cardSize.y * 0.14f, 8.0f, 18.0f);
     // Pin tail tip directly onto the zoom icon area (right edge of minimap).
-    const float minimapZoomTargetX = minimapPosX + minimapWidth - 2.0f;
+    const float minimapZoomTargetX = zoomAnchorX;
     const float minimapZoomTargetY = minimapPosY + minimapHeight * 0.52f;
     const float tailCenterY = std::clamp(minimapZoomTargetY, cardTopLeft.y + cardRounding + tailHalfHeight, cardBottomRight.y - cardRounding - tailHalfHeight);
     ImVec2 tailPoly[3] = {
