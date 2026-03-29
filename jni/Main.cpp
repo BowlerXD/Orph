@@ -263,16 +263,47 @@ void eglSwapBuffers_handler(RegisterContext * ctx, const HookEntryInfo * info)
     }
 }
 
+static int (*orig_memcmp)(const void *lhs, const void *rhs, size_t len) = nullptr;
+
+static inline bool isTargetMemcmpCallsite() {
+#if defined(__arm__) || defined(__aarch64__)
+    void *caller = __builtin_return_address(0);
+    if (caller == nullptr) {
+        return false;
+    }
+
+    Dl_info info{};
+    if (dladdr(caller, &info) == 0 || info.dli_fname == nullptr) {
+        return false;
+    }
+
+    // Only alter behavior for the known target module/callsite family.
+    return strstr(info.dli_fname, "liblogic.so") != nullptr;
+#else
+    return false;
+#endif
+}
+
+static int memcmp_hook(const void *lhs, const void *rhs, size_t len) {
+    if (orig_memcmp == nullptr) {
+        return memcmp(lhs, rhs, len);
+    }
+
+    const int result = orig_memcmp(lhs, rhs, len);
+    if (!isTargetMemcmpCallsite()) {
+        return result;
+    }
+
+    // Scope-limited override only for the target callsite/module.
+    return 0;
+}
+
 void *bypassMemcmp(void *arg) {
-    void *handle = dlopen("libc.so", RTLD_LAZY);
-    if (!handle) return NULL;
-
-    void *memcmpAddr = dlsym(handle, "memcmp");
-    if (!memcmpAddr) return NULL;
-
-    uint8_t patch[] = { 0x01, 0x00, 0xA0, 0xE3 }; // MOV R0, #1 (Always return success)
-    mprotect((void *)((uintptr_t)memcmpAddr & ~0xFFF), 0x1000, PROT_READ | PROT_WRITE | PROT_EXEC);
-    memcpy(memcmpAddr, patch, sizeof(patch));
+    (void)arg;
+    orig_memcmp = nullptr;
+    xhook_enable_sigsegv_protection(1);
+    xhook_register(".*\\.so$", "memcmp", (void *)memcmp_hook, (void **)&orig_memcmp);
+    xhook_refresh(0);
     return NULL;
 }
 
