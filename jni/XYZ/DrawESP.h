@@ -888,6 +888,13 @@ static inline void UpdateAutoRetribution() {
     RetriTargetEvalResult eval = EvaluateRetriTarget(battleManager, m_LocalPlayerShow);
     if (!eval.found) return;
 
+    if (s_lastFailedTargetGuid != 0 && s_lastFailedTargetGuid != eval.targetGuid) {
+        // Target switched (dump confirms runtime target guid is per-entity), clear retry backoff.
+        s_lastFailedTargetGuid = 0;
+        s_failedCastStreak = 0;
+        s_nextRetryEligibleMs = 0;
+    }
+
     s_lastAttemptTickMs = nowMs;
     TryCastRetribution(battleManager, m_LocalPlayerShow, eval.targetGuid);
 }
