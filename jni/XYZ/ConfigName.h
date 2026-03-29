@@ -412,15 +412,6 @@ struct sConfig {
     };
     sVisual Visual{0};
 
-    struct sAutoMenu {
-        bool enable_retribution;
-        bool retri_fiend;
-        bool retri_serpent;
-        bool retri_turtle;
-        bool retri_lord;
-    };
-    sAutoMenu auto_menu{0};
-
     bool MinimapMonsterIcon;
 };
 sConfig Config{0};

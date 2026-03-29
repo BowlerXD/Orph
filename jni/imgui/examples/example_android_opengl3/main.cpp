@@ -36,17 +36,17 @@ void init(struct android_app* app)
     {
         g_EglDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
         if (g_EglDisplay == EGL_NO_DISPLAY)
-            __android_log_print(ANDROID_LOG_ERROR, g_LogTag, "%s", "eglGetDisplay(EGL_DEFAULT_DISPLAY) returned EGL_NO_DISPLAY");
+            (void)0;
 
         if (eglInitialize(g_EglDisplay, 0, 0) != EGL_TRUE)
-            __android_log_print(ANDROID_LOG_ERROR, g_LogTag, "%s", "eglInitialize() returned with an error");
+            (void)0;
 
         const EGLint egl_attributes[] = { EGL_BLUE_SIZE, 8, EGL_GREEN_SIZE, 8, EGL_RED_SIZE, 8, EGL_DEPTH_SIZE, 24, EGL_SURFACE_TYPE, EGL_WINDOW_BIT, EGL_NONE };
         EGLint num_configs = 0;
         if (eglChooseConfig(g_EglDisplay, egl_attributes, nullptr, 0, &num_configs) != EGL_TRUE)
-            __android_log_print(ANDROID_LOG_ERROR, g_LogTag, "%s", "eglChooseConfig() returned with an error");
+            (void)0;
         if (num_configs == 0)
-            __android_log_print(ANDROID_LOG_ERROR, g_LogTag, "%s", "eglChooseConfig() returned 0 matching config");
+            (void)0;
 
         // Get the first matching config
         EGLConfig egl_config;
@@ -59,7 +59,7 @@ void init(struct android_app* app)
         g_EglContext = eglCreateContext(g_EglDisplay, egl_config, EGL_NO_CONTEXT, egl_context_attributes);
 
         if (g_EglContext == EGL_NO_CONTEXT)
-            __android_log_print(ANDROID_LOG_ERROR, g_LogTag, "%s", "eglCreateContext() returned EGL_NO_CONTEXT");
+            (void)0;
 
         g_EglSurface = eglCreateWindowSurface(g_EglDisplay, egl_config, g_App->window, NULL);
         eglMakeCurrent(g_EglDisplay, g_EglSurface, g_EglSurface, g_EglContext);
