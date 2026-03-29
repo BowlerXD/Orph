@@ -612,13 +612,14 @@ static inline void DrawObjectiveAlertCard(ImDrawList *draw, int objectiveId, int
     draw->AddRect(cardTopLeft, cardBottomRight, bubbleBorder, cardRounding, 0, 1.4f);
 
     const float tailHalfHeight = std::clamp(cardSize.y * 0.14f, 8.0f, 18.0f);
-    const float tailTipOffsetX = std::clamp(cardSize.x * 0.09f, 22.0f, 38.0f);
-    const float minimapZoomTargetY = zoomAnchorY;
+    // Pin tail tip directly onto the zoom icon area (right edge of minimap).
+    const float minimapZoomTargetX = minimapPosX + minimapWidth - 2.0f;
+    const float minimapZoomTargetY = minimapPosY + minimapHeight * 0.52f;
     const float tailCenterY = std::clamp(minimapZoomTargetY, cardTopLeft.y + cardRounding + tailHalfHeight, cardBottomRight.y - cardRounding - tailHalfHeight);
     ImVec2 tailPoly[3] = {
         ImVec2(cardTopLeft.x + 1.0f, tailCenterY - tailHalfHeight),
         ImVec2(cardTopLeft.x + 1.0f, tailCenterY + tailHalfHeight),
-        ImVec2(zoomAnchorX, minimapZoomTargetY)
+        ImVec2(minimapZoomTargetX, minimapZoomTargetY)
     };
     draw->AddConvexPolyFilled(tailPoly, 3, bubbleFill);
     draw->AddPolyline(tailPoly, 3, bubbleBorder, ImDrawFlags_Closed, 1.4f);
