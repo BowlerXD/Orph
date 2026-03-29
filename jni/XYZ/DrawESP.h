@@ -603,8 +603,8 @@ static inline void DrawObjectiveAlertCard(ImDrawList *draw, int objectiveId, int
     const float zoomAnchorX = minimapWidth + std::clamp(minimapWidth * 0.05f, 10.0f, 20.0f);
     const float zoomAnchorY = minimapPosY + minimapHeight * 0.50f;
     // Nudge card diagonally to lower-left so it hugs minimap edge closer.
-    const float cardNudgeLeft = std::clamp(cardSize.x * 0.08f, 16.0f, 30.0f);
-    const float cardNudgeDown = std::clamp(cardSize.y * 0.18f, 10.0f, 20.0f);
+    const float cardNudgeLeft = std::clamp(cardSize.x * 0.13f, 26.0f, 48.0f);
+    const float cardNudgeDown = std::clamp(cardSize.y * 0.26f, 16.0f, 30.0f);
     ImVec2 cardTopLeft(
         minimapWidth - 2.0f - cardNudgeLeft,
         zoomAnchorY - cardSize.y - std::clamp(cardSize.y * 0.14f, 10.0f, 18.0f) + cardNudgeDown
@@ -618,14 +618,16 @@ static inline void DrawObjectiveAlertCard(ImDrawList *draw, int objectiveId, int
     draw->AddRectFilled(cardTopLeft, cardBottomRight, bubbleFill, cardRounding);
     draw->AddRect(cardTopLeft, cardBottomRight, bubbleBorder, cardRounding, 0, 1.4f);
 
-    const float tailHalfHeight = std::clamp(cardSize.y * 0.14f, 8.0f, 18.0f);
+    const float tailHalfHeight = std::clamp(cardSize.y * 0.18f, 10.0f, 22.0f);
     // Pin tail tip directly onto the zoom icon area (right edge of minimap).
     const float minimapZoomTargetX = zoomAnchorX;
-    const float minimapZoomTargetY = minimapPosY + minimapHeight * 0.52f;
+    const float minimapZoomTargetY = minimapPosY + minimapHeight * 0.56f;
     const float tailCenterY = std::clamp(minimapZoomTargetY, cardTopLeft.y + cardRounding + tailHalfHeight, cardBottomRight.y - cardRounding - tailHalfHeight);
+    const float tailBaseX = cardTopLeft.x + 2.0f;
+    const float tailBaseInsetY = std::clamp(cardSize.y * 0.05f, 2.0f, 6.0f);
     ImVec2 tailPoly[3] = {
-        ImVec2(cardTopLeft.x + 1.0f, tailCenterY - tailHalfHeight),
-        ImVec2(cardTopLeft.x + 1.0f, tailCenterY + tailHalfHeight),
+        ImVec2(tailBaseX, tailCenterY - tailHalfHeight + tailBaseInsetY),
+        ImVec2(tailBaseX, tailCenterY + tailHalfHeight - tailBaseInsetY),
         ImVec2(minimapZoomTargetX, minimapZoomTargetY)
     };
     draw->AddConvexPolyFilled(tailPoly, 3, bubbleFill);
