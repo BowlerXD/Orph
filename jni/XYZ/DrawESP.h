@@ -204,7 +204,6 @@ double get_m_AttkSpeed(void* thiz){
     return orig_get_m_AttkSpeed(thiz);
 }
 
-static inline void UpdateAutoRetribution();
 
 DefineHook(void, UpdateMapHack, (void * pThis)) {
     static time_t s_lastDebugLog = 0;
@@ -225,7 +224,6 @@ DefineHook(void, UpdateMapHack, (void * pThis)) {
         Config.Visual.ShowMonsterTest;
 
     if (maphackVisualEnabled != s_lastVisualState || monsterVisualEnabled != s_lastMonsterState) {
-        LOGI("[Debug][UpdateMapHack] state changed | hero=%d monster=%d", maphackVisualEnabled, monsterVisualEnabled);
         s_lastVisualState = maphackVisualEnabled;
         s_lastMonsterState = monsterVisualEnabled;
     }
@@ -395,33 +393,12 @@ DefineHook(void, UpdateMapHack, (void * pThis)) {
             battleBridgeMissing = true;
         }
     } else if (maphackVisualEnabled || monsterVisualEnabled) {
-        LOGW("[Debug][UpdateMapHack] skipped because pThis is null while features are enabled");
     }
 
     time_t now = time(nullptr);
     if ((maphackVisualEnabled || monsterVisualEnabled) && (now - s_lastDebugLog >= 5)) {
-        LOGI("[Debug][UpdateMapHack] enemies=%d monsters=%d bridgeMissing=%d managerMissing=%d", enemyProcessed, monsterProcessed, battleBridgeMissing, battleManagerMissing);
-        LOGI("[Debug][FeatureCalls][Hero] mapHackIcon=%d mapHackIcon2=%d mapHackIcon3=%d healthBar=%d headIcon=%d",
-             featureMapHackIconCalls,
-             featureMapHackIcon2Calls,
-             featureMapHackIcon3Calls,
-             featureHealthBarCalls,
-             featureHeadIconCalls);
-        LOGI("[Debug][FeatureCalls][Monster] monsterIcon=%d monsterHealth=%d monsterBody=%d showJungle=%d showMonsterTest=%d",
-             featureMonsterIconCalls,
-             featureMonsterHealthCalls,
-             featureMonsterBodyCalls,
-             featureShowJungleCalls,
-             featureShowMonsterTestCalls);
-        LOGI("[Debug][Minion] candidates=%d iconCalls=%d invalidGuid=%d minimap=%d monsterIcon=%d",
-             soldierCandidates,
-             soldierIconCalls,
-             soldierSkippedInvalidGuid,
-             Config.MinimapIcon,
-             Config.Visual.MonsterIcon);
         s_lastDebugLog = now;
     }
-    UpdateAutoRetribution();
     oUpdateMapHack(pThis);
 }
 
@@ -531,284 +508,6 @@ CooldownValues getPlayerCoolDown(int keys, uintptr_t values) {
 
 static inline bool IsExcludedJungleObjective(int jungleTypeId) {
     return jungleTypeId == 2002 || jungleTypeId == 2003 || jungleTypeId == 2110; // lord/turtle
-}
-
-static inline bool AutoRetriIsInMatch() {
-    void *battleBridgeInstance = nullptr, *battleManagerInstance = nullptr;
-    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleData", "m_BattleBridge", &battleBridgeInstance);
-    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
-    return battleBridgeInstance && battleManagerInstance;
-}
-
-struct RuntimeBattleSpellInfo {
-    int spellId = 0;
-    int spellSlot = -1;
-    int retriCommandCode = -1;
-    bool retriCommandCodeResolved = false;
-    bool valid = false;
-};
-
-static inline RuntimeBattleSpellInfo GetRuntimeBattleSpellInfo(uintptr_t localPlayerShow) {
-    RuntimeBattleSpellInfo info{};
-    if (!localPlayerShow) return info;
-
-    static const uintptr_t kShowEntityOwnSkillCompOffset = ShowEntity_m_OwnSkillComp;
-    static const uintptr_t kShowOwnSkillCompSkillListOffset = ShowOwnSkillComp_m_SkillList();
-    static const uintptr_t kShowPlayerSummonSkillIdOffset = ShowPlayer_m_iSummonSkillId();
-    static const uintptr_t kShowSkillDataTranIdOffset = ShowSkillData_m_TranID();
-    static const intptr_t kShowSkillDataCommandCodeOffset = (intptr_t)ShowSkillData_CommandCode();
-
-    if (!kShowEntityOwnSkillCompOffset || !kShowOwnSkillCompSkillListOffset ||
-        !kShowPlayerSummonSkillIdOffset || !kShowSkillDataTranIdOffset) {
-        return info;
-    }
-
-    info.spellId = *(int *) (localPlayerShow + kShowPlayerSummonSkillIdOffset);
-    if (info.spellId <= 0) return info;
-
-    auto m_OwnSkillComp = *(uintptr_t *) (localPlayerShow + kShowEntityOwnSkillCompOffset);
-    if (!m_OwnSkillComp) return info;
-
-    auto m_SkillList = *(List<uintptr_t> **) (m_OwnSkillComp + kShowOwnSkillCompSkillListOffset);
-    if (!m_SkillList) return info;
-
-    const int skillCount = m_SkillList->getSize();
-    for (int i = 0; i < skillCount; i++) {
-        auto p_SkillList = m_SkillList->getItems()[i];
-        if (!p_SkillList) continue;
-        const int tranId = *(int *) ((uintptr_t)p_SkillList + kShowSkillDataTranIdOffset);
-        if (tranId != info.spellId) continue;
-        info.spellSlot = i;
-        info.valid = true;
-        if (kShowSkillDataCommandCodeOffset != -1 && kShowSkillDataCommandCodeOffset != 0) {
-            const int runtimeCommandCode = *(int *) ((uintptr_t)p_SkillList + (uintptr_t)kShowSkillDataCommandCodeOffset);
-            if (runtimeCommandCode > 0) {
-                info.retriCommandCode = runtimeCommandCode;
-                info.retriCommandCodeResolved = true;
-            }
-        } else {
-            info.retriCommandCodeResolved = false;
-        }
-        return info;
-    }
-    return info;
-}
-
-static inline bool IsSelectedAutoRetriMonster(int monsterId) {
-    if (monsterId == 2004) return Config.auto_menu.retri_fiend;
-    if (monsterId == 2005) return Config.auto_menu.retri_serpent;
-    if (monsterId == 2003) return Config.auto_menu.retri_turtle;
-    if (monsterId == 2002) return Config.auto_menu.retri_lord;
-    return false;
-}
-
-static inline bool IsRetriTargetAllowed(int monsterId, bool sameCampType) {
-    // Auto retri must be independent from visual enemy-only filters:
-    // sameCampType remains accepted as long as the objective is enabled in menu.
-    (void)sameCampType;
-    return IsSelectedAutoRetriMonster(monsterId);
-}
-
-static inline int GetRetributionDamageCurrentLevel(uintptr_t localPlayerShow) {
-    if (!localPlayerShow) return 0;
-    int level = *(int *) ((uintptr_t)localPlayerShow + EntityBase_m_Level());
-    if (level < 1) level = 1;
-    return 520 + ((level - 1) * 80);
-}
-
-static inline bool IsRetributionSpellReady(int selfGuid, uintptr_t localPlayerShow) {
-    auto coolDownData = getPlayerCoolDown(selfGuid, localPlayerShow);
-    return coolDownData.spell <= 0;
-}
-
-struct RetriTargetEvalResult {
-    bool found = false;
-    uint64_t targetGuid = 0;
-    uintptr_t targetEntityPtr = 0;
-    int targetId = 0;
-    int targetHp = 0;
-    int targetHpMax = 0;
-    Vector3 targetWorldPosition{};
-    float targetDistance = 0.0f;
-    bool targetInRange = false;
-    bool spellReady = false;
-    bool sameCampType = false;
-};
-
-static inline float ComputeRetributionCastDistance(const Vector3 &selfPos, const Vector3 &targetPos) {
-    // Keep this aligned with skill-cast world-space range checks (XZ plane), not minimap/screen distance.
-    const float dx = selfPos.x - targetPos.x;
-    const float dz = selfPos.z - targetPos.z;
-    return std::sqrt((dx * dx) + (dz * dz));
-}
-
-static inline RetriTargetEvalResult EvaluateRetriTarget(uintptr_t battleManager, uintptr_t localPlayerShow) {
-    RetriTargetEvalResult result{};
-    if (!battleManager || !localPlayerShow) return result;
-
-    auto m_dicMonsterShow = *(Dictionary<int, uintptr_t> **) (battleManager + BattleManager_m_dicMonsterShow());
-    if (!m_dicMonsterShow) return result;
-
-    auto selfPos = *(Vector3 *) (localPlayerShow + ShowEntity__Position());
-    const int retriDamageCurrentLevel = GetRetributionDamageCurrentLevel(localPlayerShow);
-    const int selfGuid = *(int *) (localPlayerShow + EntityBase_m_uGuid());
-    const bool spellReady = IsRetributionSpellReady(selfGuid, localPlayerShow);
-    constexpr float kRetributionRange = 6.0f;
-    for (int i = 0; i < m_dicMonsterShow->getNumKeys(); i++) {
-        auto values = m_dicMonsterShow->getValues()[i];
-        if (!values) continue;
-
-        auto m_bDeath = *(bool *) ((uintptr_t)values + EntityBase_m_bDeath());
-        if (m_bDeath) continue;
-
-        auto m_ID = *(int *) ((uintptr_t)values + EntityBase_m_ID());
-        auto new_mID = *(int *) ((uintptr_t)values + ShowEntity_m_id());
-        bool isWildMonster = *(bool *) ((uintptr_t)values + ShowEntity_IsWildMonster);
-        int jungleTypeId = bMonster(new_mID) ? new_mID : m_ID;
-        bool isJungleMonster = isWildMonster && bMonster(jungleTypeId);
-        const bool sameCampType = *(bool *) ((uintptr_t)values + EntityBase_m_bSameCampType());
-        if (!isJungleMonster) continue;
-        if (!IsRetriTargetAllowed(jungleTypeId, sameCampType)) continue;
-
-        auto m_Hp = *(int *) ((uintptr_t)values + EntityBase_m_Hp());
-        auto m_HpMax = *(int *) ((uintptr_t)values + EntityBase_m_HpMax());
-        auto _Position = *(Vector3 *) ((uintptr_t)values + ShowEntity__Position());
-        bool hpValid = m_Hp > 0;
-        bool posValid = _Position.x != 0.0f || _Position.y != 0.0f || _Position.z != 0.0f;
-        if (!hpValid || !posValid) continue;
-
-        float targetDistance = ComputeRetributionCastDistance(selfPos, _Position);
-        bool inRange = targetDistance <= kRetributionRange;
-        bool lethal = m_Hp <= retriDamageCurrentLevel;
-        if (!inRange || !lethal || !spellReady) continue;
-
-        const uint64_t targetGuid = *(uint64_t *) ((uintptr_t)values + EntityBase_m_uGuid());
-        if (!targetGuid) continue;
-
-        result.found = true;
-        result.targetGuid = targetGuid;
-        result.targetEntityPtr = (uintptr_t)values;
-        result.targetId = jungleTypeId;
-        result.targetHp = m_Hp;
-        result.targetHpMax = m_HpMax;
-        result.targetWorldPosition = _Position;
-        result.targetDistance = targetDistance;
-        result.targetInRange = inRange;
-        result.spellReady = spellReady;
-        result.sameCampType = sameCampType;
-        return result;
-    }
-
-    return result;
-}
-
-static inline bool TryCastRetribution(uintptr_t battleManager, uintptr_t localPlayerShow, uint64_t targetGuid) {
-    void *battleBridgeInstance = nullptr, *battleManagerInstance = nullptr;
-    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleData", "m_BattleBridge", &battleBridgeInstance);
-    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
-    if (!battleBridgeInstance || !battleManagerInstance || !battleManager || !localPlayerShow || !targetGuid) {
-        return false;
-    }
-
-    RuntimeBattleSpellInfo spellInfo = GetRuntimeBattleSpellInfo(localPlayerShow);
-    if (spellInfo.spellId != 20020) {
-        return false;
-    }
-    if (!spellInfo.valid || spellInfo.spellSlot < 0) {
-        return false;
-    }
-    const bool localPlayerDead = *(bool *) (localPlayerShow + EntityBase_m_bDeath());
-    const bool localPlayerDisabled = get_InTransformation((void *)localPlayerShow);
-    if (localPlayerDead || localPlayerDisabled) {
-        return false;
-    }
-
-    const int selfGuid = *(int *) (localPlayerShow + EntityBase_m_uGuid());
-    if (!IsRetributionSpellReady(selfGuid, localPlayerShow)) {
-        return false;
-    }
-
-    RetriTargetEvalResult eval = EvaluateRetriTarget(battleManager, localPlayerShow);
-    if (!eval.found || eval.targetGuid != targetGuid) {
-        return false;
-    }
-
-    // dump.cs: ShowSelfPlayer.TryUseSkill(... skillId, ... firstTarget ...)
-    // gunakan skillId retri langsung agar auto retri setara dengan "menekan spell retri".
-    const int castSkillId = spellInfo.spellId;
-    int outState = 0;
-    TryUseSkillOutState12Args autoArgs{
-        castSkillId, targetGuid,
-        0, 0, 0, 0, 0, 0, 0, 0, 0
-    };
-
-    const bool casted = CallShowSelfPlayer_TryUseSkillOutState12_AutoRetri(
-        (void *)localPlayerShow, &outState,
-        autoArgs.p1, autoArgs.p2, autoArgs.p3, autoArgs.p4, autoArgs.p5, autoArgs.p6,
-        autoArgs.p7, autoArgs.p8, autoArgs.p9, autoArgs.p10, autoArgs.p11);
-    (void)outState;
-    (void)eval;
-    return casted;
-}
-
-static inline void UpdateAutoRetribution() {
-    static int64_t s_lastAttemptTickMs = 0;
-    static constexpr int64_t kAttemptDebounceMs = 120;
-
-    const int64_t nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count();
-
-    if ((nowMs - s_lastAttemptTickMs) < kAttemptDebounceMs) {
-        return;
-    }
-
-    static uintptr_t s_lastBattleManagerTracked = 0;
-    static int s_lastSelfGuidTracked = 0;
-    static int s_lastSpellIdTracked = -1;
-
-    if (!Config.auto_menu.enable_retribution) return;
-    if (!AutoRetriIsInMatch()) {
-        if (s_lastBattleManagerTracked != 0 || s_lastSelfGuidTracked != 0 || s_lastSpellIdTracked != -1) {
-            ResetManualRetriCache("match-changed/out-of-match");
-            s_lastBattleManagerTracked = 0;
-            s_lastSelfGuidTracked = 0;
-            s_lastSpellIdTracked = -1;
-        }
-        return;
-    }
-
-    void *battleManagerInstance = nullptr;
-    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
-    if (!battleManagerInstance) return;
-
-    auto battleManager = (uintptr_t) battleManagerInstance;
-    auto m_LocalPlayerShow = *(uintptr_t *) (battleManager + BattleManager_m_LocalPlayerShow());
-    if (!m_LocalPlayerShow) return;
-
-    const int selfGuid = *(int *) (m_LocalPlayerShow + EntityBase_m_uGuid());
-    if (s_lastBattleManagerTracked != 0 && s_lastBattleManagerTracked != battleManager) {
-        ResetManualRetriCache("match-changed/battle-manager");
-    }
-    if (s_lastSelfGuidTracked != 0 && s_lastSelfGuidTracked != selfGuid) {
-        ResetManualRetriCache("hero-changed/self-guid");
-    }
-    s_lastBattleManagerTracked = battleManager;
-    s_lastSelfGuidTracked = selfGuid;
-
-    RuntimeBattleSpellInfo activeSpellInfo = GetRuntimeBattleSpellInfo(m_LocalPlayerShow);
-    if (s_lastSpellIdTracked != -1 && s_lastSpellIdTracked != activeSpellInfo.spellId) {
-        ResetManualRetriCache("battle-spell-changed");
-    }
-    s_lastSpellIdTracked = activeSpellInfo.spellId;
-    if (activeSpellInfo.spellId != 20020) {
-        return;
-    }
-
-    RetriTargetEvalResult eval = EvaluateRetriTarget(battleManager, m_LocalPlayerShow);
-    if (!eval.found) return;
-
-    s_lastAttemptTickMs = nowMs;
-    TryCastRetribution(battleManager, m_LocalPlayerShow, eval.targetGuid);
 }
 
 static inline uint ResolveJungleCampType(int selfCampType, int entityCampType) {
@@ -1066,7 +765,6 @@ void NewDrawESP(ImDrawList *draw, float screenWidth, float screenHeight) {
     Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
     if (!battleBridgeInstance || !battleManagerInstance) {
         if (!loggedMissingOffsets) {
-            LOGI("[Debug][ESP] waiting instances bridge=%p manager=%p", battleBridgeInstance, battleManagerInstance);
             loggedMissingOffsets = true;
         }
         return;
@@ -1196,7 +894,6 @@ void NewDrawESP(ImDrawList *draw, float screenWidth, float screenHeight) {
         }
     }
     if (Config.MinimapIcon && (time(nullptr) - s_lastMinimapOverlayLog >= 5)) {
-        LOGI("[Debug][MinimapOverlay] soldier=%d jungle=%d", minimapSoldierOverlayCount, minimapJungleOverlayCount);
         s_lastMinimapOverlayLog = time(nullptr);
     }
     /*enemy*/

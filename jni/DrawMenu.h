@@ -140,19 +140,6 @@ static inline bool IsInMatch() {
     return bFullChecked;
 }
 
-static inline bool HasRetributionSpell() {
-    if (!IsInMatch()) return false;
-    void *battleManagerInstance = nullptr;
-    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
-    if (!battleManagerInstance) return false;
-
-    auto localPlayerShow = *(uintptr_t *) ((uintptr_t)battleManagerInstance + BattleManager_m_LocalPlayerShow());
-    if (!localPlayerShow) return false;
-
-    int summonSkillId = *(int *) ((uintptr_t)localPlayerShow + ShowPlayer_m_iSummonSkillId());
-    return summonSkillId == 20020;
-}
-
 inline ImColor main_color(230, 134, 224, 255);
 
 inline ImColor text_color[3] = {ImColor(255, 255, 255, 255), ImColor(200, 200, 200, 255), ImColor(150, 150, 150, 255) };
@@ -479,24 +466,7 @@ void DrawMenu() {
             }
 			}
 
-            if (ImGui::BeginTabItem("Menu Auto")) {
-                ImGui::TextUnformatted("Feature will appear when you are in the match.");
-                if (IsInMatch() && HasRetributionSpell()) {
-                    ImGui::Spacing();
-                    ImGui::SeparatorText("Retribution Menu");
-                    ImGui::Checkbox("Enable Auto Retribution", &Config.auto_menu.enable_retribution);
-                    ImGui::Checkbox("Auto Retribution Fiend", &Config.auto_menu.retri_fiend);
-                    ImGui::Checkbox("Auto Retribution Serpent", &Config.auto_menu.retri_serpent);
-                    ImGui::Checkbox("Auto Retribution Turtle", &Config.auto_menu.retri_turtle);
-                    ImGui::Checkbox("Auto Retribution Lord", &Config.auto_menu.retri_lord);
-                    if (Config.auto_menu.enable_retribution) {
-                        ImGui::TextDisabled("Auto Retri aktif saat HP objective <= damage retri.");
-                    }
-                }
-                ImGui::EndTabItem();
-            }
-			
-			static int SelectInfo = 0;
+				static int SelectInfo = 0;
             static ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV;
             if (ImGui::BeginTabItem("Setting")) {
                 ImGui::BeginGroupPanel("Menu Setting", ImVec2(-1.0f, 0.0f));
