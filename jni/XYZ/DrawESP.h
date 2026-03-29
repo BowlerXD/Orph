@@ -594,7 +594,9 @@ static inline void DrawObjectiveAlertCard(ImDrawList *draw, int objectiveId, int
 
     // Place alert to the right of minimap region (compact, image-first style).
     ImVec2 cardTopLeft(screenWidth * 0.315f, screenHeight * 0.035f);
-    ImVec2 cardSize(screenWidth * 0.33f, screenHeight * 0.105f);
+    float cardWidth = std::clamp(screenWidth * 0.22f, 240.0f, 420.0f);
+    float cardHeight = std::clamp(screenHeight * 0.09f, 60.0f, 120.0f);
+    ImVec2 cardSize(cardWidth, cardHeight);
     ImVec2 cardBottomRight(cardTopLeft.x + cardSize.x, cardTopLeft.y + cardSize.y);
 
     // Clean panel behind content (no custom stepped bubble).
@@ -603,7 +605,7 @@ static inline void DrawObjectiveAlertCard(ImDrawList *draw, int objectiveId, int
 
     // Alert image (use raw icon color; no gradient tint so base64 image is not distorted).
     Icon alertIcon = MonsterAlertTexture(objectiveId);
-    const float imagePadding = std::max(5.0f, screenHeight * 0.004f);
+    const float imagePadding = std::clamp(cardHeight * 0.08f, 4.0f, 8.0f);
     ImVec2 imageTopLeft(cardTopLeft.x + imagePadding, cardTopLeft.y + imagePadding);
     float imageSize = cardSize.y - imagePadding * 2.0f;
     ImVec2 imageBottomRight(imageTopLeft.x + imageSize, imageTopLeft.y + imageSize);
@@ -613,14 +615,17 @@ static inline void DrawObjectiveAlertCard(ImDrawList *draw, int objectiveId, int
         draw->AddRectFilled(imageTopLeft, imageBottomRight, IM_COL32(65, 72, 90, 220), 6.0f);
     }
 
-    float titleFontSize = std::max(14.0f, screenHeight * 0.020f);
-    ImVec2 titlePos(imageBottomRight.x + 8.0f, cardTopLeft.y + 8.0f);
+    float titleFontSize = std::clamp(cardHeight * 0.25f, 12.0f, 20.0f);
+    const float contentStartX = imageBottomRight.x + std::clamp(cardWidth * 0.025f, 6.0f, 12.0f);
+    const float contentTopPadding = std::clamp(cardHeight * 0.12f, 6.0f, 10.0f);
+    ImVec2 titlePos(contentStartX, cardTopLeft.y + contentTopPadding);
     draw->AddText(NULL, titleFontSize, titlePos, IM_COL32(255, 255, 255, 245), alertText);
 
-    float barStartX = imageBottomRight.x + 8.0f;
-    float barWidth = std::max(70.0f, cardBottomRight.x - barStartX - 8.0f);
-    float barHeight = std::max(8.0f, screenHeight * 0.010f);
-    float barY = cardBottomRight.y - barHeight - 8.0f;
+    float barStartX = contentStartX;
+    const float contentRightPadding = std::clamp(cardWidth * 0.035f, 8.0f, 14.0f);
+    float barWidth = std::max(1.0f, cardBottomRight.x - barStartX - contentRightPadding);
+    float barHeight = std::clamp(cardHeight * 0.16f, 8.0f, 14.0f);
+    float barY = cardBottomRight.y - barHeight - std::clamp(cardHeight * 0.12f, 6.0f, 10.0f);
     ImVec2 barMin(barStartX, barY);
     ImVec2 barMax(barStartX + barWidth, barY + barHeight);
     draw->AddRectFilled(barMin, barMax, IM_COL32(60, 66, 78, 235), 3.0f);
