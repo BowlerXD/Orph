@@ -1,7 +1,9 @@
 #pragma once
 #include <algorithm>
+#include <cinttypes>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <string>
 #include <unordered_map>
 
@@ -573,7 +575,8 @@ static inline bool IsRetributionSpellReady(int selfGuid, uintptr_t localPlayerSh
 
 struct RetriTargetEvalResult {
     bool found = false;
-    int targetGuid = 0;
+    uint64_t targetGuid = 0;
+    uintptr_t targetEntityPtr = 0;
     int targetId = 0;
     int targetHp = 0;
     int targetHpMax = 0;
@@ -647,11 +650,17 @@ static inline RetriTargetEvalResult EvaluateRetriTarget(uintptr_t battleManager,
         }
         if (!inRange || !lethal || !spellReady) continue;
 
-        int targetGuid = *(int *) ((uintptr_t)values + EntityBase_m_uGuid());
+        const uint64_t targetGuid = *(uint64_t *) ((uintptr_t)values + EntityBase_m_uGuid());
         if (!targetGuid) continue;
+
+        if (ShouldLogAutoRetriDebug("candidate-guid-" + std::to_string((unsigned long long)targetGuid), nowMs, 3500)) {
+            LOGI("[Debug][AutoRetri] pre-cast-target monsterTypeId=%d runtimeTargetGuid=0x%016" PRIx64 " (%" PRIu64 ") entityPtr=%p",
+                 jungleTypeId, targetGuid, targetGuid, (void *)values);
+        }
 
         result.found = true;
         result.targetGuid = targetGuid;
+        result.targetEntityPtr = (uintptr_t)values;
         result.targetId = jungleTypeId;
         result.targetHp = m_Hp;
         result.targetHpMax = m_HpMax;
@@ -665,7 +674,7 @@ static inline RetriTargetEvalResult EvaluateRetriTarget(uintptr_t battleManager,
     return result;
 }
 
-static inline bool TryCastRetribution(uintptr_t battleManager, uintptr_t localPlayerShow, int targetGuid) {
+static inline bool TryCastRetribution(uintptr_t battleManager, uintptr_t localPlayerShow, uint64_t targetGuid) {
     void *battleBridgeInstance = nullptr, *battleManagerInstance = nullptr;
     Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleData", "m_BattleBridge", &battleBridgeInstance);
     Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
@@ -694,18 +703,31 @@ static inline bool TryCastRetribution(uintptr_t battleManager, uintptr_t localPl
 
     RetriTargetEvalResult eval = EvaluateRetriTarget(battleManager, localPlayerShow);
     if (!eval.found || eval.targetGuid != targetGuid) {
-        LOGI("[Debug][AutoRetri] cast-skip reason=target-invalid targetGuid=%d", targetGuid);
+        LOGI("[Debug][AutoRetri] cast-skip reason=target-invalid targetGuid=0x%016" PRIx64 " (%" PRIu64 ")", targetGuid, targetGuid);
         return false;
+    }
+
+    static uint64_t s_lastCastTargetGuid = 0;
+    static uintptr_t s_lastCastEntityPtr = 0;
+    const uintptr_t currentEntityPtr = eval.targetEntityPtr;
+    if (s_lastCastTargetGuid != 0 && s_lastCastTargetGuid == targetGuid) {
+        LOGI("[Debug][AutoRetri] target-guid-stability stable=1 runtimeTargetGuid=0x%016" PRIx64 " (%" PRIu64 ") prevMarker=%p currMarker=%p",
+             targetGuid, targetGuid, (void *)s_lastCastEntityPtr, (void *)currentEntityPtr);
+    } else if (s_lastCastTargetGuid != 0 && s_lastCastTargetGuid != targetGuid) {
+        LOGI("[Debug][AutoRetri] target-guid-stability stable=0 prevGuid=0x%016" PRIx64 " (%" PRIu64 ") currGuid=0x%016" PRIx64 " (%" PRIu64 ")",
+             s_lastCastTargetGuid, s_lastCastTargetGuid, targetGuid, targetGuid);
     }
 
     int outState = 0;
     constexpr int kRetributionSpellSlotIndex = 5;
+    LOGI("[Debug][AutoRetri] cast-args spellSlot=%d runtimeTargetGuid=0x%016" PRIx64 " (%" PRIu64 ") paramOrder=[slot,targetGuid,p3..p11]",
+         kRetributionSpellSlotIndex, targetGuid, targetGuid);
     const bool casted = CallShowSelfPlayer_TryUseSkillOutState12(
         (void *)localPlayerShow, &outState, kRetributionSpellSlotIndex, targetGuid, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     const int64_t nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now().time_since_epoch()).count();
-    if (ShouldLogAutoRetriDebug("cast-result-" + std::to_string(targetGuid), nowMs, 7000)) {
-        LOGI("[Debug][AutoRetri] cast-result status=%s reasonCode=%d targetGuid=%d targetId=%d hp=%d hpMax=%d dist=%.2f inRange=%d spellReady=%d sameCampType=%d castApiTarget=entityId castApiSpellSlot=%d",
+    if (ShouldLogAutoRetriDebug("cast-result-" + std::to_string((unsigned long long)targetGuid), nowMs, 7000)) {
+        LOGI("[Debug][AutoRetri] cast-result status=%s reasonCode=%d targetGuid=0x%016" PRIx64 " (%" PRIu64 ") targetId=%d hp=%d hpMax=%d dist=%.2f inRange=%d spellReady=%d sameCampType=%d castApiTarget=runtimeGuid castApiSpellSlot=%d",
              casted ? "success" : "fail", outState, targetGuid, eval.targetId, eval.targetHp, eval.targetHpMax,
              eval.targetDistance, eval.targetInRange, eval.spellReady, eval.sameCampType, kRetributionSpellSlotIndex);
         if (eval.targetInRange && !casted) {
@@ -713,6 +735,8 @@ static inline bool TryCastRetribution(uintptr_t battleManager, uintptr_t localPl
                  outState, kRetributionSpellSlotIndex);
         }
     }
+    s_lastCastTargetGuid = targetGuid;
+    s_lastCastEntityPtr = currentEntityPtr;
     return casted;
 }
 
