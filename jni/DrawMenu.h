@@ -471,16 +471,21 @@ void DrawMenu() {
                 ImGui::BeginGroupPanel("AI Control", ImVec2(-1.0f, 0.0f));
                 {
                     ImGui::Checkbox("Enable AI Control", &g_EnableAIControl);
-                    ImGui::TextWrapped("Manual apply only (no auto trigger while AFK).");
+                    ImGui::TextWrapped("Klik Apply untuk paksa AI control aktif sekarang.");
 
                     if (ImGui::Button("Apply AI Control", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
                         int playerUid = 0;
                         uintptr_t uidOffset = SystemData_m_uiID();
                         if (uidOffset) playerUid = *(int *)(uidOffset);
 
+                        int heroId = 0;
+                        uintptr_t heroOffset = RoomData_uiHeroIDChoose();
+                        if (heroOffset) heroId = *(int *)(heroOffset);
+
                         uint32_t targetUid = g_EnableAIControl ? static_cast<uint32_t>(playerUid) : 0u;
-                        bool applied = SetPlayerAIControl(false, 0, targetUid, false, 0);
-                        g_AiControlStatus = applied ? "AI control applied manually (AFK trigger disabled)." : "Failed to apply AI control (not in match or method missing).";
+                        uint32_t askEndTime = g_EnableAIControl ? static_cast<uint32_t>(time(nullptr) + 120) : 0u;
+                        bool applied = SetPlayerAIControl(g_EnableAIControl, heroId, targetUid, false, askEndTime);
+                        g_AiControlStatus = applied ? "AI control applied now." : "Failed to apply AI control (not in match or method missing).";
                     }
 
                     ImGui::Spacing();
