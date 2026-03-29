@@ -574,7 +574,7 @@ static inline RuntimeBattleSpellInfo GetRuntimeBattleSpellInfo(uintptr_t localPl
     static const uintptr_t kShowOwnSkillCompSkillListOffset = ShowOwnSkillComp_m_SkillList();
     static const uintptr_t kShowPlayerSummonSkillIdOffset = ShowPlayer_m_iSummonSkillId();
     static const uintptr_t kShowSkillDataTranIdOffset = ShowSkillData_m_TranID();
-    static const uintptr_t kShowSkillDataCommandCodeOffset = ShowSkillData_CommandCode();
+    static const intptr_t kShowSkillDataCommandCodeOffset = (intptr_t)ShowSkillData_CommandCode();
 
     if (!kShowEntityOwnSkillCompOffset || !kShowOwnSkillCompSkillListOffset ||
         !kShowPlayerSummonSkillIdOffset || !kShowSkillDataTranIdOffset) {
@@ -598,16 +598,31 @@ static inline RuntimeBattleSpellInfo GetRuntimeBattleSpellInfo(uintptr_t localPl
         if (tranId != info.spellId) continue;
         info.spellSlot = i;
         info.valid = true;
-        if (kShowSkillDataCommandCodeOffset) {
-            const int runtimeCommandCode = *(int *) ((uintptr_t)p_SkillList + kShowSkillDataCommandCodeOffset);
+        if (kShowSkillDataCommandCodeOffset != -1 && kShowSkillDataCommandCodeOffset != 0) {
+            const int runtimeCommandCode = *(int *) ((uintptr_t)p_SkillList + (uintptr_t)kShowSkillDataCommandCodeOffset);
             if (runtimeCommandCode > 0) {
                 info.retriCommandCode = runtimeCommandCode;
                 info.retriCommandCodeResolved = true;
             }
+        } else {
+            info.retriCommandCodeResolved = false;
         }
         return info;
     }
     return info;
+}
+
+static inline void LogCommandCodeUnresolvedOncePerMatch(uintptr_t battleManager, int spellId, int spellSlot, const char *logContext) {
+    static uintptr_t s_lastMatchBattleManager = 0;
+    static bool s_loggedUnresolvedForMatch = false;
+    if (s_lastMatchBattleManager != battleManager) {
+        s_lastMatchBattleManager = battleManager;
+        s_loggedUnresolvedForMatch = false;
+    }
+    if (s_loggedUnresolvedForMatch) return;
+    s_loggedUnresolvedForMatch = true;
+    LOGW("[Debug][AutoRetri] %s reason=command-code-unresolved spellId=%d slot=%d",
+         logContext, spellId, spellSlot);
 }
 
 static inline bool IsSelectedAutoRetriMonster(int monsterId) {
@@ -759,9 +774,9 @@ static inline bool TryCastRetribution(uintptr_t battleManager, uintptr_t localPl
         LOGI("[Debug][AutoRetri] cast-skip reason=spell-slot-not-found spellId=%d", spellInfo.spellId);
         return false;
     }
-    if (!spellInfo.retriCommandCodeResolved || spellInfo.retriCommandCode <= 0) {
-        LOGW("[Debug][AutoRetri] cast-blocked reason=retri-command-code-unresolved spellId=%d slot=%d",
-             spellInfo.spellId, spellInfo.spellSlot);
+    const bool hasManualP1 = g_ManualRetriSnapshotCaptured;
+    if (!hasManualP1 && (!spellInfo.retriCommandCodeResolved || spellInfo.retriCommandCode <= 0)) {
+        LogCommandCodeUnresolvedOncePerMatch(battleManager, spellInfo.spellId, spellInfo.spellSlot, "cast-blocked");
         return false;
     }
 
@@ -799,19 +814,13 @@ static inline bool TryCastRetribution(uintptr_t battleManager, uintptr_t localPl
     TryUseSkillOutState12Args autoArgs{};
     TryUseSkillResolvedModeInfo castModeResolved{};
 
-    if (g_ManualRetriSnapshotCaptured) {
-        if (g_ManualRetriSnapshotArgs.p1 != spellInfo.retriCommandCode) {
-            LOGW("[Debug][AutoRetri] cast-blocked reason=manual-p1-mismatch manualP1=%d retriCommandCode=%d",
-                 g_ManualRetriSnapshotArgs.p1, spellInfo.retriCommandCode);
-            return false;
-        }
-        LOGI("[Debug][AutoRetri] manual-validation status=match manualP1=%d retriCommandCode=%d",
-             g_ManualRetriSnapshotArgs.p1, spellInfo.retriCommandCode);
+    if (hasManualP1) {
+        LOGI("[Debug][AutoRetri] manual-validation status=use-manual-p1 manualP1=%d",
+             g_ManualRetriSnapshotArgs.p1);
         // Manual retri trace is the source of truth.
         // Keep encoded signature payload from the manual call, then patch only dynamic runtime fields.
         autoArgs = g_ManualRetriSnapshotArgs;
         castModeResolved = ResolveTryUseSkillModeFromArgs(g_ManualRetriSnapshotArgs);
-        autoArgs.p1 = spellInfo.retriCommandCode;
         if (castModeResolved.isEntityTarget) {
             // Entity-target mode -> patch runtime target guid.
             autoArgs.p2 = targetGuid;
@@ -825,7 +834,7 @@ static inline bool TryCastRetribution(uintptr_t battleManager, uintptr_t localPl
                 autoArgs.p5 = (int)std::lround(eval.targetWorldPosition.z * 1000.0f);
             }
         }
-        LOGI("[Debug][AutoRetri] cast-args source=manual-template p1(encoded)=%d p2=%" PRIu64 " (0x%016" PRIx64 ") templateP2=%" PRIu64 " p3=%d p4=%d p5=%d p7=%d p8=%d p10=%d p11=%d",
+        LOGI("[Debug][AutoRetri] cast-args source=manual-template p1(manual)=%d p2=%" PRIu64 " (0x%016" PRIx64 ") templateP2=%" PRIu64 " p3=%d p4=%d p5=%d p7=%d p8=%d p10=%d p11=%d",
              autoArgs.p1, autoArgs.p2, autoArgs.p2, g_ManualRetriSnapshotArgs.p2,
              autoArgs.p3, autoArgs.p4, autoArgs.p5,
              autoArgs.p7, autoArgs.p8, autoArgs.p10, autoArgs.p11);
@@ -932,9 +941,9 @@ static inline void UpdateAutoRetribution() {
     if (activeSpellInfo.spellId != 20020) {
         return;
     }
-    if (!activeSpellInfo.retriCommandCodeResolved || activeSpellInfo.retriCommandCode <= 0) {
-        LOGW("[Debug][AutoRetri] auto-blocked reason=retri-command-code-unresolved spellId=%d slot=%d",
-             activeSpellInfo.spellId, activeSpellInfo.spellSlot);
+    if (!g_ManualRetriSnapshotCaptured &&
+        (!activeSpellInfo.retriCommandCodeResolved || activeSpellInfo.retriCommandCode <= 0)) {
+        LogCommandCodeUnresolvedOncePerMatch(battleManager, activeSpellInfo.spellId, activeSpellInfo.spellSlot, "auto-blocked");
         return;
     }
 
