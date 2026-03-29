@@ -779,20 +779,25 @@ static inline bool TryCastRetribution(uintptr_t battleManager, uintptr_t localPl
     }
 
     int outState = 0;
-    TryUseSkillOutState12Args autoArgs{
-        spellInfo.spellSlot, targetGuid,
-        0, 0, 0, 0, 0, 0, 0, 0, 0
-    };
+    TryUseSkillOutState12Args autoArgs{};
 
-    if (g_ManualRetriSnapshotCaptured && g_ManualRetriSnapshotArgs.p2 == targetGuid) {
-        // Mirror manual parameter order/payload as close as possible for identical target.
+    if (g_ManualRetriSnapshotCaptured) {
+        // Manual retri trace is the source of truth.
+        // Keep encoded signature payload from the manual call, then patch only dynamic runtime fields.
         autoArgs = g_ManualRetriSnapshotArgs;
-        autoArgs.p1 = spellInfo.spellSlot;
-        autoArgs.p2 = targetGuid;
-        LOGI("[Debug][AutoRetri] cast-args source=manual-snapshot slot=%d targetGuid=%" PRIu64 " (0x%016" PRIx64 ")",
-             autoArgs.p1, autoArgs.p2, autoArgs.p2);
+        if (autoArgs.p2 != 0) {
+            // Only patch target guid when manual template uses entity-target mode.
+            autoArgs.p2 = targetGuid;
+        }
+        LOGI("[Debug][AutoRetri] cast-args source=manual-template p1(encoded)=%d p2=%" PRIu64 " (0x%016" PRIx64 ") templateP2=%" PRIu64 " p7=%d p8=%d p10=%d p11=%d",
+             autoArgs.p1, autoArgs.p2, autoArgs.p2, g_ManualRetriSnapshotArgs.p2,
+             autoArgs.p7, autoArgs.p8, autoArgs.p10, autoArgs.p11);
     } else {
-        LOGI("[Debug][AutoRetri] cast-args source=default slot=%d runtimeTargetGuid=%" PRIu64 " (0x%016" PRIx64 ") paramOrder=[p1..p11]",
+        autoArgs = {
+            spellInfo.spellSlot, targetGuid,
+            0, 0, 0, 0, 0, 0, 0, 0, 0
+        };
+        LOGI("[Debug][AutoRetri] cast-args source=fallback-default slot(raw)=%d runtimeTargetGuid=%" PRIu64 " (0x%016" PRIx64 ") paramOrder=[p1..p11]",
              autoArgs.p1, autoArgs.p2, autoArgs.p2);
     }
 
