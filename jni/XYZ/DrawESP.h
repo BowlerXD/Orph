@@ -666,7 +666,8 @@ static inline void UpdateAutoRetribution() {
     static constexpr int64_t kAttemptCooldownMs = 200;
     static constexpr int64_t kPostCastLockMs = 400;
 
-    const int64_t nowMs = GetNowMs();
+    const int64_t nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
     if ((nowMs - s_lastAttemptTickMs) < kAttemptCooldownMs) return;
     if ((nowMs - s_lastCastTickMs) < kPostCastLockMs) return;
     s_lastAttemptTickMs = nowMs;
