@@ -702,6 +702,35 @@ uintptr_t ShowSkillData_m_TranID(){
 	return (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "ShowSkillData", "m_TranID");
 }
 
+uintptr_t ShowSkillData_CommandCode() {
+    static uintptr_t cachedOffset = UINTPTR_MAX;
+    if (cachedOffset != UINTPTR_MAX) {
+        return cachedOffset;
+    }
+
+    const char *candidateFieldNames[] = {
+            "m_CommandCode",
+            "m_iCommandCode",
+            "m_CommandID",
+            "m_iCommandID",
+            "m_CommandType",
+            "m_iCommandType"
+    };
+
+    for (const char *fieldName : candidateFieldNames) {
+        uintptr_t offset = (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "ShowSkillData", fieldName);
+        if (offset) {
+            cachedOffset = offset;
+            LOGI("[AutoRetri] resolved ShowSkillData command-code field '%s' at offset=%p", fieldName, (void *) offset);
+            return cachedOffset;
+        }
+    }
+
+    cachedOffset = 0;
+    LOGW("[AutoRetri] unable to resolve ShowSkillData command-code field. Auto retri will be blocked to avoid no-op cast.");
+    return cachedOffset;
+}
+
 uintptr_t ShowPlayer_m_iSummonSkillId(){
 	return (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "ShowPlayer", "m_iSummonSkillId");
 }
