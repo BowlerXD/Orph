@@ -548,24 +548,6 @@ struct RuntimeBattleSpellInfo {
     bool valid = false;
 };
 
-static inline const char *AutoRetriSpellNameById(int spellId) {
-    switch (spellId) {
-        case 20150: return "Execute";
-        case 20020: return "Retribution";
-        case 20030: return "Inspire";
-        case 20040: return "Sprint";
-        case 20050: return "Revitalize";
-        case 20060: return "Aegis";
-        case 20070: return "Petrify";
-        case 20080: return "Purify";
-        case 20140: return "Flameshot";
-        case 20100: return "Flicker";
-        case 20160: return "Arrival";
-        case 20190: return "Vengeance";
-        default: return nullptr;
-    }
-}
-
 static inline RuntimeBattleSpellInfo GetRuntimeBattleSpellInfo(uintptr_t localPlayerShow) {
     RuntimeBattleSpellInfo info{};
     if (!localPlayerShow) return info;
@@ -612,19 +594,6 @@ static inline RuntimeBattleSpellInfo GetRuntimeBattleSpellInfo(uintptr_t localPl
     return info;
 }
 
-static inline void LogCommandCodeUnresolvedOncePerMatch(uintptr_t battleManager, int spellId, int spellSlot, const char *logContext) {
-    static uintptr_t s_lastMatchBattleManager = 0;
-    static bool s_loggedUnresolvedForMatch = false;
-    if (s_lastMatchBattleManager != battleManager) {
-        s_lastMatchBattleManager = battleManager;
-        s_loggedUnresolvedForMatch = false;
-    }
-    if (s_loggedUnresolvedForMatch) return;
-    s_loggedUnresolvedForMatch = true;
-    LOGW("[Debug][AutoRetri] %s reason=command-code-unresolved spellId=%d slot=%d",
-         logContext, spellId, spellSlot);
-}
-
 static inline bool IsSelectedAutoRetriMonster(int monsterId) {
     if (monsterId == 2004) return Config.auto_menu.retri_fiend;
     if (monsterId == 2005) return Config.auto_menu.retri_serpent;
@@ -652,12 +621,6 @@ static inline bool IsRetributionSpellReady(int selfGuid, uintptr_t localPlayerSh
     return coolDownData.spell <= 0;
 }
 
-static inline bool IsRetriPayloadReady(const RuntimeBattleSpellInfo &spellInfo) {
-    const bool hasManualPayload = g_ManualRetriSnapshotCaptured || g_CachedRetriP1Valid;
-    const bool hasResolvedPayload = spellInfo.retriCommandCodeResolved && spellInfo.retriCommandCode > 0;
-    return hasManualPayload || hasResolvedPayload;
-}
-
 struct RetriTargetEvalResult {
     bool found = false;
     uint64_t targetGuid = 0;
@@ -679,16 +642,6 @@ static inline float ComputeRetributionCastDistance(const Vector3 &selfPos, const
     return std::sqrt((dx * dx) + (dz * dz));
 }
 
-static inline bool ShouldLogAutoRetriDebug(const std::string &key, int64_t nowMs, int64_t cooldownMs = 5000) {
-    static std::unordered_map<std::string, int64_t> s_lastLogTickByKey;
-    auto it = s_lastLogTickByKey.find(key);
-    if (it != s_lastLogTickByKey.end() && (nowMs - it->second) < cooldownMs) {
-        return false;
-    }
-    s_lastLogTickByKey[key] = nowMs;
-    return true;
-}
-
 static inline RetriTargetEvalResult EvaluateRetriTarget(uintptr_t battleManager, uintptr_t localPlayerShow) {
     RetriTargetEvalResult result{};
     if (!battleManager || !localPlayerShow) return result;
@@ -701,9 +654,6 @@ static inline RetriTargetEvalResult EvaluateRetriTarget(uintptr_t battleManager,
     const int selfGuid = *(int *) (localPlayerShow + EntityBase_m_uGuid());
     const bool spellReady = IsRetributionSpellReady(selfGuid, localPlayerShow);
     constexpr float kRetributionRange = 6.0f;
-    const int64_t nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count();
-
     for (int i = 0; i < m_dicMonsterShow->getNumKeys(); i++) {
         auto values = m_dicMonsterShow->getValues()[i];
         if (!values) continue;
@@ -730,19 +680,10 @@ static inline RetriTargetEvalResult EvaluateRetriTarget(uintptr_t battleManager,
         float targetDistance = ComputeRetributionCastDistance(selfPos, _Position);
         bool inRange = targetDistance <= kRetributionRange;
         bool lethal = m_Hp <= retriDamageCurrentLevel;
-        if (lethal && ShouldLogAutoRetriDebug("pre-cast-state-" + std::to_string(jungleTypeId), nowMs, 7000)) {
-            LOGI("[Debug][AutoRetri] pre-cast monsterId=%d hp=%d hpMax=%d retriDamage=%d distance=%.2f inRange=%d spellReady=%d sameCampType=%d",
-                 jungleTypeId, m_Hp, m_HpMax, retriDamageCurrentLevel, targetDistance, inRange, spellReady, sameCampType);
-        }
         if (!inRange || !lethal || !spellReady) continue;
 
         const uint64_t targetGuid = *(uint64_t *) ((uintptr_t)values + EntityBase_m_uGuid());
         if (!targetGuid) continue;
-
-        if (ShouldLogAutoRetriDebug("candidate-guid-" + std::to_string((unsigned long long)targetGuid), nowMs, 3500)) {
-            LOGI("[Debug][AutoRetri] pre-cast-target monsterTypeId=%d runtimeTargetGuid=%" PRIu64 " (0x%016" PRIx64 ") entityPtr=%p",
-                 jungleTypeId, targetGuid, targetGuid, (void *)values);
-        }
 
         result.found = true;
         result.targetGuid = targetGuid;
@@ -766,160 +707,58 @@ static inline bool TryCastRetribution(uintptr_t battleManager, uintptr_t localPl
     Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleData", "m_BattleBridge", &battleBridgeInstance);
     Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
     if (!battleBridgeInstance || !battleManagerInstance || !battleManager || !localPlayerShow || !targetGuid) {
-        LOGI("[Debug][AutoRetri] cast-skip reason=invalid-context");
         return false;
     }
 
     RuntimeBattleSpellInfo spellInfo = GetRuntimeBattleSpellInfo(localPlayerShow);
     if (spellInfo.spellId != 20020) {
-        LOGI("[Debug][AutoRetri] cast-skip reason=active-spell-not-retribution spellId=%d slot=%d",
-             spellInfo.spellId, spellInfo.spellSlot);
         return false;
     }
     if (!spellInfo.valid || spellInfo.spellSlot < 0) {
-        LOGI("[Debug][AutoRetri] cast-skip reason=spell-slot-not-found spellId=%d", spellInfo.spellId);
         return false;
     }
-    const bool hasManualP1 = g_ManualRetriSnapshotCaptured;
-    const bool hasManualCachedP1 = g_CachedRetriP1Valid;
-    if (!hasManualP1 && !hasManualCachedP1 && (!spellInfo.retriCommandCodeResolved || spellInfo.retriCommandCode <= 0)) {
-        LogCommandCodeUnresolvedOncePerMatch(battleManager, spellInfo.spellId, spellInfo.spellSlot, "cast-blocked");
-        return false;
-    }
-
     const bool localPlayerDead = *(bool *) (localPlayerShow + EntityBase_m_bDeath());
     const bool localPlayerDisabled = get_InTransformation((void *)localPlayerShow);
     if (localPlayerDead || localPlayerDisabled) {
-        LOGI("[Debug][AutoRetri] cast-skip reason=player-unavailable dead=%d disabled=%d", localPlayerDead, localPlayerDisabled);
         return false;
     }
 
     const int selfGuid = *(int *) (localPlayerShow + EntityBase_m_uGuid());
     if (!IsRetributionSpellReady(selfGuid, localPlayerShow)) {
-        LOGI("[Debug][AutoRetri] cast-skip reason=spell-cooldown");
         return false;
     }
 
     RetriTargetEvalResult eval = EvaluateRetriTarget(battleManager, localPlayerShow);
     if (!eval.found || eval.targetGuid != targetGuid) {
-        LOGI("[Debug][AutoRetri] cast-skip reason=target-invalid targetGuid=%" PRIu64 " (0x%016" PRIx64 ")", targetGuid, targetGuid);
         return false;
     }
 
-    static uint64_t s_lastCastTargetGuid = 0;
-    static uintptr_t s_lastCastEntityPtr = 0;
-    const uintptr_t currentEntityPtr = eval.targetEntityPtr;
-    if (s_lastCastTargetGuid != 0 && s_lastCastTargetGuid == targetGuid) {
-        LOGI("[Debug][AutoRetri] target-guid-stability stable=1 runtimeTargetGuid=%" PRIu64 " (0x%016" PRIx64 ") prevMarker=%p currMarker=%p",
-             targetGuid, targetGuid, (void *)s_lastCastEntityPtr, (void *)currentEntityPtr);
-    } else if (s_lastCastTargetGuid != 0 && s_lastCastTargetGuid != targetGuid) {
-        LOGI("[Debug][AutoRetri] target-guid-stability stable=0 prevGuid=%" PRIu64 " (0x%016" PRIx64 ") currGuid=%" PRIu64 " (0x%016" PRIx64 ")",
-             s_lastCastTargetGuid, s_lastCastTargetGuid, targetGuid, targetGuid);
-    }
-
+    // dump.cs: ShowSelfPlayer.TryUseSkill(... skillId, ... firstTarget ...)
+    // gunakan skillId retri langsung agar auto retri setara dengan "menekan spell retri".
+    const int castSkillId = spellInfo.spellId;
     int outState = 0;
-    TryUseSkillOutState12Args autoArgs{};
-    TryUseSkillResolvedModeInfo castModeResolved{};
-
-    if (hasManualP1) {
-        LOGI("[Debug][AutoRetri] manual-validation status=use-manual-p1 manualP1=%d",
-             g_ManualRetriSnapshotArgs.p1);
-        // Manual retri trace is the source of truth.
-        // Keep encoded signature payload from the manual call, then patch only dynamic runtime fields.
-        autoArgs = g_ManualRetriSnapshotArgs;
-        castModeResolved = ResolveTryUseSkillModeFromArgs(g_ManualRetriSnapshotArgs);
-        if (castModeResolved.isEntityTarget) {
-            // Entity-target mode -> patch runtime target guid.
-            autoArgs.p2 = targetGuid;
-        } else {
-            // Non-entity-target mode -> do not send runtime target guid.
-            autoArgs.p2 = 0;
-            if (castModeResolved.needsWorldPosition) {
-                // Non-entity mode that needs position -> use world-position target as cast input.
-                autoArgs.p3 = (int)std::lround(eval.targetWorldPosition.x * 1000.0f);
-                autoArgs.p4 = (int)std::lround(eval.targetWorldPosition.y * 1000.0f);
-                autoArgs.p5 = (int)std::lround(eval.targetWorldPosition.z * 1000.0f);
-            }
-        }
-        LOGI("[Debug][AutoRetri] cast-args source=manual-template p1(manual)=%d p2=%" PRIu64 " (0x%016" PRIx64 ") templateP2=%" PRIu64 " p3=%d p4=%d p5=%d p7=%d p8=%d p10=%d p11=%d",
-             autoArgs.p1, autoArgs.p2, autoArgs.p2, g_ManualRetriSnapshotArgs.p2,
-             autoArgs.p3, autoArgs.p4, autoArgs.p5,
-             autoArgs.p7, autoArgs.p8, autoArgs.p10, autoArgs.p11);
-    } else if (hasManualCachedP1) {
-        castModeResolved.mode = TryUseSkillResolvedMode::NonEntityNoPosition;
-        castModeResolved.isEntityTarget = false;
-        castModeResolved.needsWorldPosition = false;
-        autoArgs = {
-            g_CachedRetriP1, 0,
-            0, 0, 0, 0,
-            g_CachedRetriP7, g_CachedRetriP8, 0, g_CachedRetriP10, g_CachedRetriP11
-        };
-        LOGI("[Debug][AutoRetri] auto-p1-source=manual-cache auto-p1=%d", autoArgs.p1);
-        LOGI("[Debug][AutoRetri] cast-args source=manual-cache p1=%d p2=%" PRIu64 " (0x%016" PRIx64 ") p3=%d p4=%d p5=%d p7=%d p8=%d p10=%d p11=%d",
-             autoArgs.p1, autoArgs.p2, autoArgs.p2,
-             autoArgs.p3, autoArgs.p4, autoArgs.p5,
-             autoArgs.p7, autoArgs.p8, autoArgs.p10, autoArgs.p11);
-    } else {
-        castModeResolved.mode = TryUseSkillResolvedMode::EntityTarget;
-        castModeResolved.isEntityTarget = true;
-        autoArgs = {
-            spellInfo.retriCommandCode, targetGuid,
-            0, 0, 0, 0, 0, 0, 0, 0, 0
-        };
-        LOGI("[Debug][AutoRetri] cast-args source=fallback-default retriCommandCode=%d runtimeTargetGuid=%" PRIu64 " (0x%016" PRIx64 ") paramOrder=[p1..p11]",
-             autoArgs.p1, autoArgs.p2, autoArgs.p2);
-    }
-    LOGI("[Debug][AutoRetri] castModeResolved mode=%s isEntityTarget=%d needsWorldPosition=%d runtimeTargetGuid=%" PRIu64 " worldPos=(%.3f,%.3f,%.3f)",
-         TryUseSkillResolvedModeLabel(castModeResolved.mode),
-         castModeResolved.isEntityTarget,
-         castModeResolved.needsWorldPosition,
-         targetGuid,
-         eval.targetWorldPosition.x, eval.targetWorldPosition.y, eval.targetWorldPosition.z);
+    TryUseSkillOutState12Args autoArgs{
+        castSkillId, targetGuid,
+        0, 0, 0, 0, 0, 0, 0, 0, 0
+    };
 
     const bool casted = CallShowSelfPlayer_TryUseSkillOutState12_AutoRetri(
         (void *)localPlayerShow, &outState,
         autoArgs.p1, autoArgs.p2, autoArgs.p3, autoArgs.p4, autoArgs.p5, autoArgs.p6,
         autoArgs.p7, autoArgs.p8, autoArgs.p9, autoArgs.p10, autoArgs.p11);
-    const int64_t nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count();
-    if (ShouldLogAutoRetriDebug("cast-result-" + std::to_string((unsigned long long)targetGuid), nowMs, 7000)) {
-        LOGI("[Debug][AutoRetri] cast-result status=%s reasonCode=%d targetGuid=%" PRIu64 " (0x%016" PRIx64 ") targetId=%d hp=%d hpMax=%d dist=%.2f inRange=%d spellReady=%d sameCampType=%d castApiTarget=runtimeGuid castApiSpellSlot=%d",
-             casted ? "success" : "fail", outState, targetGuid, targetGuid, eval.targetId, eval.targetHp, eval.targetHpMax,
-             eval.targetDistance, eval.targetInRange, eval.spellReady, eval.sameCampType, spellInfo.spellSlot);
-        if (eval.targetInRange && !casted) {
-            LOGI("[Debug][AutoRetri] cast-fail-diagnostic reasonCode=%d check-api-target=entityId-vs-worldPosition check-api-spell-slot=current=%d",
-                 outState, spellInfo.spellSlot);
-        }
-    }
-    s_lastCastTargetGuid = targetGuid;
-    s_lastCastEntityPtr = currentEntityPtr;
+    (void)outState;
+    (void)eval;
     return casted;
 }
 
 static inline void UpdateAutoRetribution() {
     static int64_t s_lastAttemptTickMs = 0;
-    static constexpr int64_t kAttemptDebounceMs = 220;
-    static int s_pendingCastWindowFrame = -1;
-    static bool s_waitingCooldownActivation = false;
+    static constexpr int64_t kAttemptDebounceMs = 120;
 
     const int64_t nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now().time_since_epoch()).count();
 
-    auto logAttemptBlockedByDebounce = [&](const char *reason) {
-        if (ShouldLogAutoRetriDebug(std::string("attemptBlockedByDebounce-") + reason, nowMs, 350)) {
-            LOGI("[Debug][AutoRetri] attemptBlockedByDebounce reason=%s sinceLastAttemptMs=%" PRId64 " pendingCastWindowFrame=%d waitingCooldownActivation=%d",
-                 reason, nowMs - s_lastAttemptTickMs, s_pendingCastWindowFrame, s_waitingCooldownActivation);
-        }
-    };
-
     if ((nowMs - s_lastAttemptTickMs) < kAttemptDebounceMs) {
-        logAttemptBlockedByDebounce("time-debounce");
-        return;
-    }
-
-    const int currentFrame = ImGui::GetFrameCount();
-    if (s_pendingCastWindowFrame == currentFrame) {
-        logAttemptBlockedByDebounce("pending-cast-window");
         return;
     }
 
@@ -956,29 +795,6 @@ static inline void UpdateAutoRetribution() {
     s_lastBattleManagerTracked = battleManager;
     s_lastSelfGuidTracked = selfGuid;
 
-    auto coolDownData = getPlayerCoolDown(selfGuid, m_LocalPlayerShow);
-    if (s_waitingCooldownActivation) {
-        if (coolDownData.spell > 0) {
-            s_waitingCooldownActivation = false;
-            LOGI("[Debug][AutoRetri] cooldownActivationDetected spellCooldown=%d", coolDownData.spell);
-        } else {
-            logAttemptBlockedByDebounce("waiting-cooldown-activation");
-            return;
-        }
-    }
-
-    static uintptr_t s_lastBattleManagerForLog = 0;
-    static bool s_hasLoggedBattleSpellInfo = false;
-    if (!s_hasLoggedBattleSpellInfo || s_lastBattleManagerForLog != battleManager) {
-        RuntimeBattleSpellInfo spellInfo = GetRuntimeBattleSpellInfo(m_LocalPlayerShow);
-        const char *spellName = AutoRetriSpellNameById(spellInfo.spellId);
-        LOGI("[Debug][AutoRetri] match-spell-info detectedBattleSpellId=%d detectedBattleSpellSlot=%d retriCommandCode=%d retriCommandCodeResolved=%d detectedBattleSpellName=%s",
-             spellInfo.spellId, spellInfo.spellSlot, spellInfo.retriCommandCode, spellInfo.retriCommandCodeResolved,
-             spellName ? spellName : "unknown");
-        s_lastBattleManagerForLog = battleManager;
-        s_hasLoggedBattleSpellInfo = true;
-    }
-
     RuntimeBattleSpellInfo activeSpellInfo = GetRuntimeBattleSpellInfo(m_LocalPlayerShow);
     if (s_lastSpellIdTracked != -1 && s_lastSpellIdTracked != activeSpellInfo.spellId) {
         ResetManualRetriCache("battle-spell-changed");
@@ -987,21 +803,12 @@ static inline void UpdateAutoRetribution() {
     if (activeSpellInfo.spellId != 20020) {
         return;
     }
-    if (!IsRetriPayloadReady(activeSpellInfo)) {
-        LogCommandCodeUnresolvedOncePerMatch(battleManager, activeSpellInfo.spellId, activeSpellInfo.spellSlot, "auto-blocked");
-        return;
-    }
 
     RetriTargetEvalResult eval = EvaluateRetriTarget(battleManager, m_LocalPlayerShow);
     if (!eval.found) return;
 
     s_lastAttemptTickMs = nowMs;
-    s_pendingCastWindowFrame = currentFrame;
-
-    const bool casted = TryCastRetribution(battleManager, m_LocalPlayerShow, eval.targetGuid);
-    if (casted) {
-        s_waitingCooldownActivation = true;
-    }
+    TryCastRetribution(battleManager, m_LocalPlayerShow, eval.targetGuid);
 }
 
 static inline uint ResolveJungleCampType(int selfCampType, int entityCampType) {
