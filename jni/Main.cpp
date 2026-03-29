@@ -192,6 +192,13 @@ bool IsVPNEnabled() {
     jclass capabils = nullptr;
     jobject activenetwork = nullptr;
     jobject activecapabilities = nullptr;
+    jmethodID service = nullptr;
+    jmethodID has1 = nullptr;
+    jmethodID has = nullptr;
+    jmethodID getCapabil = nullptr;
+    jmethodID getActive = nullptr;
+    jboolean hasvpn1 = JNI_FALSE;
+    jboolean hasvpn2 = JNI_FALSE;
 
     ctx = env->FindClass("android/content/Context");
     if (!ctx) goto cleanup;
@@ -199,7 +206,7 @@ bool IsVPNEnabled() {
     context = getJNIContext(env);
     if (!context) goto cleanup;
 
-    jmethodID service = env->GetMethodID(ctx, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;");
+    service = env->GetMethodID(ctx, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;");
     if (!service) goto cleanup;
 
     str = env->NewStringUTF("connectivity");
@@ -214,10 +221,10 @@ bool IsVPNEnabled() {
     capabils = env->FindClass("android/net/NetworkCapabilities");
     if (!capabils) goto cleanup;
 
-    jmethodID has1 = env->GetMethodID(capabils, "hasCapability", "(I)Z");
-    jmethodID has = env->GetMethodID(capabils, "hasTransport", "(I)Z");
-    jmethodID getCapabil = env->GetMethodID(connectivity, "getNetworkCapabilities", "(Landroid/net/Network;)Landroid/net/NetworkCapabilities;");
-    jmethodID getActive = env->GetMethodID(connectivity, "getActiveNetwork", "()Landroid/net/Network;");
+    has1 = env->GetMethodID(capabils, "hasCapability", "(I)Z");
+    has = env->GetMethodID(capabils, "hasTransport", "(I)Z");
+    getCapabil = env->GetMethodID(connectivity, "getNetworkCapabilities", "(Landroid/net/Network;)Landroid/net/NetworkCapabilities;");
+    getActive = env->GetMethodID(connectivity, "getActiveNetwork", "()Landroid/net/Network;");
     if (!has1 || !has || !getCapabil || !getActive) goto cleanup;
 
     activenetwork = env->CallObjectMethod(conn_service, getActive);
@@ -226,8 +233,8 @@ bool IsVPNEnabled() {
     activecapabilities = env->CallObjectMethod(conn_service, getCapabil, activenetwork);
     if (!activecapabilities) goto cleanup;
 
-    jboolean hasvpn1 = env->CallBooleanMethod(activecapabilities, has, 4);
-    jboolean hasvpn2 = env->CallBooleanMethod(activecapabilities, has1, 4);
+    hasvpn1 = env->CallBooleanMethod(activecapabilities, has, 4);
+    hasvpn2 = env->CallBooleanMethod(activecapabilities, has1, 4);
     vpn_enabled = (hasvpn1 || hasvpn2);
 
 cleanup:
