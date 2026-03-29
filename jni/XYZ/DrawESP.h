@@ -1,5 +1,6 @@
 #pragma once
 #include <algorithm>
+#include <chrono>
 
 extern bool bFullChecked;
 
@@ -587,6 +588,61 @@ static inline ImU32 GetObjectiveAlertGradientColor(float ratio, int alpha = 255)
     return IM_COL32(r, g, b, alpha);
 }
 
+struct ObjectiveAlertState {
+    int lastHp = 0;
+    int lastHpMax = 0;
+    long long firstSeenMs = 0;
+    long long lastUpdateMs = 0;
+    bool seenFullHp = false;
+    bool active = false;
+    int belowFullStreak = 0;
+};
+
+static inline long long GetNowMs() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+
+static inline ObjectiveAlertState &GetObjectiveAlertState(int id) {
+    static ObjectiveAlertState lordState;
+    static ObjectiveAlertState turtleState;
+    return (id == 2002) ? lordState : turtleState;
+}
+
+static inline bool ShouldShowObjectiveAlert(int id, int hp, int hpMax, bool isDead) {
+    if (id != 2002 && id != 2003) return false;
+
+    ObjectiveAlertState &state = GetObjectiveAlertState(id);
+    const long long nowMs = GetNowMs();
+    const long long gracePeriodMs = 1500;
+
+    if (isDead || hpMax <= 0) {
+        state = ObjectiveAlertState{};
+        return false;
+    }
+
+    if (!state.active) {
+        state.active = true;
+        state.firstSeenMs = nowMs;
+        state.belowFullStreak = 0;
+    }
+
+    if (hp >= hpMax && hpMax > 0) {
+        state.seenFullHp = true;
+        state.belowFullStreak = 0;
+    } else if (hp < hpMax) {
+        state.belowFullStreak = std::min(state.belowFullStreak + 1, 10);
+    }
+
+    state.lastHp = hp;
+    state.lastHpMax = hpMax;
+    state.lastUpdateMs = nowMs;
+
+    const bool graceElapsed = (nowMs - state.firstSeenMs) >= gracePeriodMs;
+    const bool hpDroppedConsistently = state.belowFullStreak >= 2;
+    return graceElapsed && state.seenFullHp && hpDroppedConsistently;
+}
+
 static inline void DrawObjectiveAlertCard(ImDrawList *draw, int objectiveId, int hp, int hpMax, float screenWidth, float screenHeight) {
     if (hpMax <= 0) return;
     float ratio = std::max(0.0f, std::min(1.0f, (float)hp / (float)hpMax));
@@ -830,13 +886,13 @@ void NewDrawESP(ImDrawList *draw, float screenWidth, float screenHeight) {
         }
 			
 		if (Config.ESP.Monster.Alert) {
-            if (m_ID == 2002 && m_Hp < m_HpMax) {
-            DrawObjectiveAlertCard(draw, 2002, m_Hp, m_HpMax, screenWidth, screenHeight);
-            }    		
-            
-            if (m_ID == 2003 && m_Hp < m_HpMax) {
-            DrawObjectiveAlertCard(draw, 2003, m_Hp, m_HpMax, screenWidth, screenHeight);
-    		}
+            if (m_ID == 2002 && ShouldShowObjectiveAlert(m_ID, m_Hp, m_HpMax, m_bDeath)) {
+                DrawObjectiveAlertCard(draw, 2002, m_Hp, m_HpMax, screenWidth, screenHeight);
+            }
+
+            if (m_ID == 2003 && ShouldShowObjectiveAlert(m_ID, m_Hp, m_HpMax, m_bDeath)) {
+                DrawObjectiveAlertCard(draw, 2003, m_Hp, m_HpMax, screenWidth, screenHeight);
+            }
         }
 		
         if (Config.ESP.Monster.JungelAttack) {
