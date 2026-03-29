@@ -8,7 +8,7 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Tuple
 
 
 METHOD_DECL_RE = re.compile(
@@ -173,6 +173,24 @@ def load_critical_symbols(path: Path) -> List[dict]:
     return data
 
 
+
+
+def normalize_expected_arg_counts(symbol: dict) -> Tuple[Optional[int], Optional[Set[int]]]:
+    if "arg_counts" in symbol:
+        counts = symbol["arg_counts"]
+        if not isinstance(counts, list) or not counts or not all(isinstance(v, int) for v in counts):
+            raise ValueError("method symbol arg_counts must be a non-empty list of ints")
+        unique = set(counts)
+        return min(unique), unique
+
+    arg_count = symbol.get("arg_count")
+    if arg_count is None:
+        return None, None
+    if not isinstance(arg_count, int):
+        raise ValueError("method symbol arg_count must be an int")
+    return arg_count, {arg_count}
+
+
 def evaluate_symbols(symbols: List[dict], classes: Dict[str, ClassData]) -> List[SymbolResult]:
     results: List[SymbolResult] = []
     classes_by_name: Dict[str, List[str]] = {}
@@ -186,7 +204,7 @@ def evaluate_symbols(symbols: List[dict], classes: Dict[str, ClassData]) -> List
         namespace = symbol.get("namespace", "")
         class_name = symbol["class"]
         member_name = symbol.get("name")
-        arg_count = symbol.get("arg_count")
+        arg_count, expected_arg_counts = normalize_expected_arg_counts(symbol)
 
         fqcn = f"{namespace}.{class_name}".strip(".")
         class_data = classes.get(fqcn)
@@ -239,12 +257,21 @@ def evaluate_symbols(symbols: List[dict], classes: Dict[str, ClassData]) -> List
             available = class_data.methods.get(member_name or "", set())
             if not available:
                 status, notes = "MISSING", "method not found"
-            elif arg_count in available:
-                status, notes = "FOUND", f"matched arg_count={arg_count}"
+            elif expected_arg_counts is None or (available & expected_arg_counts):
+                if expected_arg_counts is None:
+                    status, notes = "FOUND", "method found"
+                elif len(expected_arg_counts) == 1:
+                    matched = next(iter(available & expected_arg_counts))
+                    status, notes = "FOUND", f"matched arg_count={matched}"
+                else:
+                    expected = ", ".join(str(v) for v in sorted(expected_arg_counts))
+                    matched = ", ".join(str(v) for v in sorted(available & expected_arg_counts))
+                    status, notes = "FOUND", f"matched arg_count=[{matched}] from expected=[{expected}]"
             else:
                 status = "SIGNATURE_MISMATCH"
                 counts = ", ".join(str(v) for v in sorted(available))
-                notes = f"expected arg_count={arg_count}, found arg_count=[{counts}]"
+                expected = ", ".join(str(v) for v in sorted(expected_arg_counts))
+                notes = f"expected arg_count=[{expected}], found arg_count=[{counts}]"
 
             results.append(SymbolResult(symbol_type, namespace, class_name, member_name, arg_count, status, notes))
             continue
