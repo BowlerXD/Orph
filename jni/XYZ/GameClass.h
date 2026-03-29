@@ -197,45 +197,15 @@ uintptr_t VirtualButton_m_States(){
 
 // dump: ShowSelfPlayer.TryUseSkill(skillId, ...) -> overload argCount 9
 inline uintptr_t ResolveShowSelfPlayer_TryUseSkill2() {
-    static bool loggedResolved = false;
-    static bool loggedMissing = false;
     uintptr_t method = (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowSelfPlayer", "TryUseSkill", 9);
-    if (!method) {
-        if (!loggedMissing) {
-            loggedMissing = true;
-        }
-        return 0;
-    }
-    if (!loggedResolved) {
-        loggedResolved = true;
-    }
     return method;
 }
 
 // dump: ShowSelfPlayer.TryUseSkill(out state, ...) -> overload argCount 12
 inline uintptr_t ResolveShowSelfPlayer_TryUseSkill() {
-    static bool loggedResolved = false;
-    static bool loggedMissing = false;
     uintptr_t method = (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowSelfPlayer", "TryUseSkill", 12);
-    if (!method) {
-        if (!loggedMissing) {
-            loggedMissing = true;
-        }
-        return 0;
-    }
-    if (!loggedResolved) {
-        loggedResolved = true;
-    }
     return method;
 }
-
-// callsite cast for TryUseSkill(out state, ...) overload with 12 managed args from the current dump
-using ShowSelfPlayerTryUseSkillOutState12Fn = bool (*)(
-        void *thiz,
-        int *outState,
-        int arg1, uint64_t arg2, int arg3, int arg4, int arg5, int arg6,
-        int arg7, int arg8, int arg9, int arg10, int arg11
-);
 
 #define ShowSelfPlayer_TryUseSkill2 ResolveShowSelfPlayer_TryUseSkill2()
 #define ShowSelfPlayer_TryUseSkill ResolveShowSelfPlayer_TryUseSkill()

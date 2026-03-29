@@ -206,47 +206,6 @@ double get_m_AttkSpeed(void* thiz){
 
 
 DefineHook(void, UpdateMapHack, (void * pThis)) {
-    static time_t s_lastDebugLog = 0;
-    static bool s_lastVisualState = false;
-    static bool s_lastMonsterState = false;
-
-    const bool maphackVisualEnabled =
-        Config.Visual.MaphackIcon ||
-        Config.Visual.MapHackIcon2 ||
-        Config.Visual.MapHackIcon3 ||
-        Config.Visual.HealthBar ||
-        Config.Visual.HeadIcon;
-    const bool monsterVisualEnabled =
-        Config.Visual.MonsterIcon ||
-        Config.Visual.MonsterHealth ||
-        Config.Visual.MonsterBody ||
-        Config.Visual.ShowJungle ||
-        Config.Visual.ShowMonsterTest;
-
-    if (maphackVisualEnabled != s_lastVisualState || monsterVisualEnabled != s_lastMonsterState) {
-        s_lastVisualState = maphackVisualEnabled;
-        s_lastMonsterState = monsterVisualEnabled;
-    }
-
-    //AimEnemy = GetEnemyPosAimPredict(pThis);
-    int enemyProcessed = 0;
-    int monsterProcessed = 0;
-    bool battleBridgeMissing = false;
-    bool battleManagerMissing = false;
-    int featureMapHackIcon2Calls = 0;
-    int featureMapHackIconCalls = 0;
-    int featureHealthBarCalls = 0;
-    int featureHeadIconCalls = 0;
-    int featureMapHackIcon3Calls = 0;
-    int featureMonsterIconCalls = 0;
-    int soldierCandidates = 0;
-    int soldierIconCalls = 0;
-    int soldierSkippedInvalidGuid = 0;
-    int featureMonsterHealthCalls = 0;
-    int featureMonsterBodyCalls = 0;
-    int featureShowJungleCalls = 0;
-    int featureShowMonsterTestCalls = 0;
-
     if (pThis != NULL) {
         void *BattleBridge_Instance = nullptr, *BattleManager_Instance = nullptr;
         Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleData", "m_BattleBridge", &BattleBridge_Instance);
@@ -271,21 +230,20 @@ DefineHook(void, UpdateMapHack, (void * pThis)) {
                         auto m_uGuid = *(int *) ((uintptr_t)Pawn + EntityBase_m_uGuid());
                         auto _Position = *(Vector3 *) ((uintptr_t)Pawn + ShowEntity__Position());
                         auto *m_HeadIcon = *(String **) ((uintptr_t) Pawn + ShowEntity_m_HeadIcon);
-						auto bShowEntityLayer = *(bool *) ((uintptr_t)Pawn + ShowEntity_bShowEntityLayer);
-                        enemyProcessed++;
-						
 						if (Config.Visual.MapHackIcon2){
 							auto CanSightMapHack = (void (*)(void *, Vector3)) (ShowEntity_CanSight);
-							CanSightMapHack(BattleBridge_Instance, _Position);
-                            featureMapHackIcon2Calls++;
+                            if (CanSightMapHack) {
+							    CanSightMapHack(BattleBridge_Instance, _Position);
+                            }
 						}
 						
                         if (Config.Visual.MaphackIcon) {
                             auto SetMapEntityIconPos = (void (*)(void *, Vector3, int, bool)) (BattleBridge_SetMapEntityIconPos);
                             //auto SetMapInvisibility = (void (*)(void *, bool, bool, bool)) (BattleBridge_SetMapInvisibility);                            
                             //SetMapInvisibility(BattleBridge_Instance, bShowEntityLayer, true, m_bDeath);
-                            SetMapEntityIconPos(BattleBridge_Instance, _Position,m_uGuid, true);
-                            featureMapHackIconCalls++;
+                            if (SetMapEntityIconPos) {
+                                SetMapEntityIconPos(BattleBridge_Instance, _Position,m_uGuid, true);
+                            }
 							
                         }
                         
@@ -293,25 +251,27 @@ DefineHook(void, UpdateMapHack, (void * pThis)) {
                             auto SetBloodInvisibility = (void (*)(void *, int, bool, bool, bool, int)) (BattleBridge_SetBloodInvisibility);
                             auto SynBloodAttr = (void (*)(void *, void *, bool)) (BattleBridge_SynBloodAttr());
                             auto UpdateBloodPos = (void (*)(void *, void *, bool)) (BattleBridge_UpdateBloodPos());
-                            
-                            SetBloodInvisibility(BattleBridge_Instance, m_uGuid, true, m_bDeath, true, 0);
-                            SynBloodAttr(BattleBridge_Instance, Pawn, true);
-                            UpdateBloodPos(BattleBridge_Instance, Pawn, true);
-                            featureHealthBarCalls++;
+                            if (SetBloodInvisibility && SynBloodAttr && UpdateBloodPos) {
+                                SetBloodInvisibility(BattleBridge_Instance, m_uGuid, true, m_bDeath, true, 0);
+                                SynBloodAttr(BattleBridge_Instance, Pawn, true);
+                                UpdateBloodPos(BattleBridge_Instance, Pawn, true);
+                            }
                         }
                         
                         if (Config.Visual.HeadIcon) {
                             auto BattleBridge__ShowHeadEquip = (void (*)(void *, int, String*)) (BattleBridge_ShowHeadEquip());
-                            BattleBridge__ShowHeadEquip(BattleBridge_Instance, m_uGuid, m_HeadIcon);
-                            featureHeadIconCalls++;
+                            if (BattleBridge__ShowHeadEquip) {
+                                BattleBridge__ShowHeadEquip(BattleBridge_Instance, m_uGuid, m_HeadIcon);
+                            }
                         }
 						
 						if (Config.Visual.MapHackIcon3){
                             auto ResetLayer = (void (*)(void *, bool)) (ShowEntity_ResetLayer);
                             auto EyeLayer = (void (*)(void *, bool, bool, bool)) (ShowEntityUpdateEyeLayer);
-                            ResetLayer(Pawn, true);
-                            EyeLayer(Pawn, true, true, true);
-                            featureMapHackIcon3Calls++;
+                            if (ResetLayer && EyeLayer) {
+                                ResetLayer(Pawn, true);
+                                EyeLayer(Pawn, true, true, true);
+                            }
                         }
                     }
                 }
@@ -320,7 +280,6 @@ DefineHook(void, UpdateMapHack, (void * pThis)) {
                     for (int i = 0; i < m_ShowMonster->getSize(); i++) {
                         auto Pawn = m_ShowMonster->getItems()[i];
                         if (!Pawn) continue;
-                        auto m_ID = *(int *) ((uintptr_t)Pawn + EntityBase_m_ID());
                         bool isSoldier = *(bool *) ((uintptr_t)Pawn + ShowEntity_IsSoldier);
                         bool isTower = *(bool *) ((uintptr_t)Pawn + ShowEntity_IsTower);
                         bool isWildMonster = *(bool *) ((uintptr_t)Pawn + ShowEntity_IsWildMonster);
@@ -335,8 +294,6 @@ DefineHook(void, UpdateMapHack, (void * pThis)) {
                         auto m_uGuid = *(int *) ((uintptr_t)Pawn + EntityBase_m_uGuid());
                         auto _Position = *(Vector3 *) ((uintptr_t)Pawn + ShowEntity__Position());
                         auto *m_HeadIcon = *(String **) ((uintptr_t) Pawn + ShowEntity_m_HeadIcon);
-                        monsterProcessed++;
-                        if (isSoldier) soldierCandidates++;
                         
                         if (Config.Visual.MonsterIcon || (Config.MinimapIcon && isSoldier)) {
                             auto SetMapEntityIconPos = (void (*)(void *, Vector3, int, bool)) (BattleBridge_SetMapEntityIconPos);
@@ -346,10 +303,6 @@ DefineHook(void, UpdateMapHack, (void * pThis)) {
                                     SetMapInvisibility(BattleBridge_Instance, m_uGuid, true, m_bDeath);
                                 }
                                 SetMapEntityIconPos(BattleBridge_Instance, _Position, m_uGuid, true);
-                                featureMonsterIconCalls++;
-                                if (isSoldier) soldierIconCalls++;
-                            } else if (isSoldier) {
-                                soldierSkippedInvalidGuid++;
                             }
                         }
                         
@@ -358,46 +311,40 @@ DefineHook(void, UpdateMapHack, (void * pThis)) {
                             auto SynBloodAttr = (void (*)(void *, void *, bool)) (BattleBridge_SynBloodAttr());
                             auto UpdateBloodPos = (void (*)(void *, void *, bool)) (BattleBridge_UpdateBloodPos());
                             
-                            SetBloodInvisibility(BattleBridge_Instance, m_uGuid, true, m_bDeath, true, 0);
-                            SynBloodAttr(BattleBridge_Instance, Pawn, true);
-                            UpdateBloodPos(BattleBridge_Instance, Pawn, true);
-                            featureMonsterHealthCalls++;
+                            if (SetBloodInvisibility && SynBloodAttr && UpdateBloodPos) {
+                                SetBloodInvisibility(BattleBridge_Instance, m_uGuid, true, m_bDeath, true, 0);
+                                SynBloodAttr(BattleBridge_Instance, Pawn, true);
+                                UpdateBloodPos(BattleBridge_Instance, Pawn, true);
+                            }
                         }
                         
                         if (Config.Visual.MonsterBody) {
                             auto ShowWildMonster__CanSight = (bool (*)(void*, bool)) (ShowEntity_CanSight);
-                            ShowWildMonster__CanSight(Pawn, true);
-                            featureMonsterBodyCalls++;
+                            if (ShowWildMonster__CanSight) {
+                                ShowWildMonster__CanSight(Pawn, true);
+                            }
                         }
                         
                         if (Config.Visual.ShowJungle){
                             auto ResetLayer = (void (*)(void *, bool)) (ShowEntity_ResetLayer);
                             auto EyeLayer = (void (*)(void *, bool, bool, bool)) (ShowEntityUpdateEyeLayer);
-                            ResetLayer(Pawn, true);
-                            EyeLayer(Pawn, true, true, true);
-                            featureShowJungleCalls++;
+                            if (ResetLayer && EyeLayer) {
+                                ResetLayer(Pawn, true);
+                                EyeLayer(Pawn, true, true, true);
+                            }
                         }
                         
                         if (Config.Visual.ShowMonsterTest){
                             auto InitSetEye = (void(*)(void*,bool, bool)) (ShowEntity_InitSetEye);
-                            InitSetEye(Pawn, true, true);
-                            featureShowMonsterTestCalls++;
+                            if (InitSetEye) {
+                                InitSetEye(Pawn, true, true);
+                            }
                         }
                     }
                 }
                 
-            } else {
-                battleManagerMissing = true;
             }
-        } else {
-            battleBridgeMissing = true;
         }
-    } else if (maphackVisualEnabled || monsterVisualEnabled) {
-    }
-
-    time_t now = time(nullptr);
-    if ((maphackVisualEnabled || monsterVisualEnabled) && (now - s_lastDebugLog >= 5)) {
-        s_lastDebugLog = now;
     }
     oUpdateMapHack(pThis);
 }
