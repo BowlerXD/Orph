@@ -13,7 +13,6 @@ inline uintptr_t CachedFieldOffset(const char *image, const char *namespaze, con
     if (!cached) {
         cached = (uintptr_t) Il2CppGetFieldOffset(image, namespaze, klass, field);
         if (!cached && ShouldLogOffsetFailure(failCounter)) {
-            LOGW("[OffsetCache] Failed field offset %s::%s::%s.%s (attempt=%u)", image, namespaze, klass, field, failCounter);
         }
     }
     return cached;
@@ -27,7 +26,6 @@ inline uintptr_t CachedMethodOffset(const char *image, const char *namespaze, co
                  ? (uintptr_t) Il2CppGetMethodOffset(image, namespaze, klass, method, argsCount)
                  : (uintptr_t) Il2CppGetMethodOffset(image, namespaze, klass, method);
         if (!cached && ShouldLogOffsetFailure(failCounter)) {
-            LOGW("[OffsetCache] Failed method offset %s::%s::%s.%s (args=%d attempt=%u)", image, namespaze, klass, method, argsCount, failCounter);
         }
     }
     return cached;

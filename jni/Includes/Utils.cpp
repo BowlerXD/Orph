@@ -71,7 +71,6 @@ void MakeToast(JNIEnv *env, jobject thiz, const char *text, int length) {
                     
                             "(Landroid/content/Context;Ljava/lang/CharSequence;I)Landroid/widget/Toast;");
     if (methodMakeText == NULL) {
-        LOGE("toast.makeText not Found");
         return;
     }
     //The last int is the length on how long the toast should be displayed
@@ -81,7 +80,6 @@ void MakeToast(JNIEnv *env, jobject thiz, const char *text, int length) {
 
     jmethodID methodShow = env->GetMethodID(toast, "show", "()V");
     if (methodShow == NULL) {
-        LOGE("toast.show not Found");
         return;
     }
     env->CallVoidMethod(toastobj, methodShow);
