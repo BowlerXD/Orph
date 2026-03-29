@@ -260,17 +260,53 @@ struct TryUseSkillOutState12Args {
     int p11;
 };
 
+enum class TryUseSkillResolvedMode {
+    Unknown = 0,
+    EntityTarget = 1,
+    GroundTarget = 2,
+    NonEntityNoPosition = 3
+};
+
+struct TryUseSkillResolvedModeInfo {
+    TryUseSkillResolvedMode mode = TryUseSkillResolvedMode::Unknown;
+    bool isEntityTarget = false;
+    bool needsWorldPosition = false;
+};
+
+inline TryUseSkillResolvedModeInfo ResolveTryUseSkillModeFromArgs(const TryUseSkillOutState12Args &args) {
+    TryUseSkillResolvedModeInfo info{};
+    if (args.p2 != 0) {
+        info.mode = TryUseSkillResolvedMode::EntityTarget;
+        info.isEntityTarget = true;
+        return info;
+    }
+    if (args.p3 != 0 || args.p4 != 0 || args.p5 != 0) {
+        info.mode = TryUseSkillResolvedMode::GroundTarget;
+        info.isEntityTarget = false;
+        info.needsWorldPosition = true;
+        return info;
+    }
+    info.mode = TryUseSkillResolvedMode::NonEntityNoPosition;
+    info.isEntityTarget = false;
+    return info;
+}
+
+inline const char *TryUseSkillResolvedModeLabel(const TryUseSkillResolvedMode mode) {
+    switch (mode) {
+        case TryUseSkillResolvedMode::EntityTarget: return "entity-target";
+        case TryUseSkillResolvedMode::GroundTarget: return "ground-target";
+        case TryUseSkillResolvedMode::NonEntityNoPosition: return "non-entity-no-position";
+        default: return "unknown";
+    }
+}
+
 inline ShowSelfPlayerTryUseSkillOutState12Fn g_ShowSelfPlayerTryUseSkillOutState12Orig = nullptr;
 inline bool g_AutoRetriTryUseSkillCallScope = false;
 inline bool g_ManualRetriSnapshotCaptured = false;
 inline TryUseSkillOutState12Args g_ManualRetriSnapshotArgs = {0};
 
 inline const char *TryUseSkillTargetModeLabel(const TryUseSkillOutState12Args &args) {
-    // Heuristic: non-zero target guid indicates entity-target cast.
-    if (args.p2 != 0) return "entity-target";
-    // p3..p5 often carry packed/quantized cast position in ground-target casts.
-    if (args.p3 != 0 || args.p4 != 0 || args.p5 != 0) return "ground-target";
-    return "unknown";
+    return TryUseSkillResolvedModeLabel(ResolveTryUseSkillModeFromArgs(args).mode);
 }
 
 inline void LogTryUseSkillArgs(const char *tag, const TryUseSkillOutState12Args &args) {

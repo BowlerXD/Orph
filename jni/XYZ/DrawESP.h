@@ -634,6 +634,7 @@ struct RetriTargetEvalResult {
     int targetId = 0;
     int targetHp = 0;
     int targetHpMax = 0;
+    Vector3 targetWorldPosition{};
     float targetDistance = 0.0f;
     bool targetInRange = false;
     bool spellReady = false;
@@ -718,6 +719,7 @@ static inline RetriTargetEvalResult EvaluateRetriTarget(uintptr_t battleManager,
         result.targetId = jungleTypeId;
         result.targetHp = m_Hp;
         result.targetHpMax = m_HpMax;
+        result.targetWorldPosition = _Position;
         result.targetDistance = targetDistance;
         result.targetInRange = inRange;
         result.spellReady = spellReady;
@@ -780,19 +782,33 @@ static inline bool TryCastRetribution(uintptr_t battleManager, uintptr_t localPl
 
     int outState = 0;
     TryUseSkillOutState12Args autoArgs{};
+    TryUseSkillResolvedModeInfo castModeResolved{};
 
     if (g_ManualRetriSnapshotCaptured) {
         // Manual retri trace is the source of truth.
         // Keep encoded signature payload from the manual call, then patch only dynamic runtime fields.
         autoArgs = g_ManualRetriSnapshotArgs;
-        if (autoArgs.p2 != 0) {
-            // Only patch target guid when manual template uses entity-target mode.
+        castModeResolved = ResolveTryUseSkillModeFromArgs(g_ManualRetriSnapshotArgs);
+        if (castModeResolved.isEntityTarget) {
+            // Entity-target mode -> patch runtime target guid.
             autoArgs.p2 = targetGuid;
+        } else {
+            // Non-entity-target mode -> do not send runtime target guid.
+            autoArgs.p2 = 0;
+            if (castModeResolved.needsWorldPosition) {
+                // Non-entity mode that needs position -> use world-position target as cast input.
+                autoArgs.p3 = (int)std::lround(eval.targetWorldPosition.x * 1000.0f);
+                autoArgs.p4 = (int)std::lround(eval.targetWorldPosition.y * 1000.0f);
+                autoArgs.p5 = (int)std::lround(eval.targetWorldPosition.z * 1000.0f);
+            }
         }
-        LOGI("[Debug][AutoRetri] cast-args source=manual-template p1(encoded)=%d p2=%" PRIu64 " (0x%016" PRIx64 ") templateP2=%" PRIu64 " p7=%d p8=%d p10=%d p11=%d",
+        LOGI("[Debug][AutoRetri] cast-args source=manual-template p1(encoded)=%d p2=%" PRIu64 " (0x%016" PRIx64 ") templateP2=%" PRIu64 " p3=%d p4=%d p5=%d p7=%d p8=%d p10=%d p11=%d",
              autoArgs.p1, autoArgs.p2, autoArgs.p2, g_ManualRetriSnapshotArgs.p2,
+             autoArgs.p3, autoArgs.p4, autoArgs.p5,
              autoArgs.p7, autoArgs.p8, autoArgs.p10, autoArgs.p11);
     } else {
+        castModeResolved.mode = TryUseSkillResolvedMode::EntityTarget;
+        castModeResolved.isEntityTarget = true;
         autoArgs = {
             spellInfo.spellSlot, targetGuid,
             0, 0, 0, 0, 0, 0, 0, 0, 0
@@ -800,6 +816,12 @@ static inline bool TryCastRetribution(uintptr_t battleManager, uintptr_t localPl
         LOGI("[Debug][AutoRetri] cast-args source=fallback-default slot(raw)=%d runtimeTargetGuid=%" PRIu64 " (0x%016" PRIx64 ") paramOrder=[p1..p11]",
              autoArgs.p1, autoArgs.p2, autoArgs.p2);
     }
+    LOGI("[Debug][AutoRetri] castModeResolved mode=%s isEntityTarget=%d needsWorldPosition=%d runtimeTargetGuid=%" PRIu64 " worldPos=(%.3f,%.3f,%.3f)",
+         TryUseSkillResolvedModeLabel(castModeResolved.mode),
+         castModeResolved.isEntityTarget,
+         castModeResolved.needsWorldPosition,
+         targetGuid,
+         eval.targetWorldPosition.x, eval.targetWorldPosition.y, eval.targetWorldPosition.z);
 
     const bool casted = CallShowSelfPlayer_TryUseSkillOutState12_AutoRetri(
         (void *)localPlayerShow, &outState,
