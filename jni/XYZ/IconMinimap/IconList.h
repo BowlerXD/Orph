@@ -140,12 +140,12 @@ Icon MonsterAlertTexture(int Id) {
 
     int resolvedId = 1;
     switch (Id) {
-    case 2002: // turtle
-        resolvedId = 1;
-        break;
-    case 2003: // lord
+    case 2002: // lord (this project maps 2002 -> Lord)
         // Some builds only ship one alert icon in AlertIcon.h.
         resolvedId = (MonsterAlert.size() > 2) ? 2 : 1;
+        break;
+    case 2003: // turtle (this project maps 2003 -> Turtle)
+        resolvedId = 1;
         break;
     default:
         resolvedId = Id;
