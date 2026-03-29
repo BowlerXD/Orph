@@ -652,6 +652,12 @@ static inline bool IsRetributionSpellReady(int selfGuid, uintptr_t localPlayerSh
     return coolDownData.spell <= 0;
 }
 
+static inline bool IsRetriPayloadReady(const RuntimeBattleSpellInfo &spellInfo) {
+    const bool hasManualPayload = g_ManualRetriSnapshotCaptured || g_CachedRetriP1Valid;
+    const bool hasResolvedPayload = spellInfo.retriCommandCodeResolved && spellInfo.retriCommandCode > 0;
+    return hasManualPayload || hasResolvedPayload;
+}
+
 struct RetriTargetEvalResult {
     bool found = false;
     uint64_t targetGuid = 0;
@@ -981,8 +987,7 @@ static inline void UpdateAutoRetribution() {
     if (activeSpellInfo.spellId != 20020) {
         return;
     }
-    if (!g_ManualRetriSnapshotCaptured && !g_CachedRetriP1Valid &&
-        (!activeSpellInfo.retriCommandCodeResolved || activeSpellInfo.retriCommandCode <= 0)) {
+    if (!IsRetriPayloadReady(activeSpellInfo)) {
         LogCommandCodeUnresolvedOncePerMatch(battleManager, activeSpellInfo.spellId, activeSpellInfo.spellSlot, "auto-blocked");
         return;
     }
