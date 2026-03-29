@@ -170,61 +170,81 @@ void YaserAntiCrack1() {
 }
 
 bool IsVPNEnabled() {
-    JNIEnv *env;
-    g_vm->AttachCurrentThread(&env, 0);
-    jclass ctx = env->FindClass("android/content/Context");
-    jobject context = getJNIContext(env);
+    JNIEnv *env = nullptr;
+    bool attached_by_this_function = false;
+    bool vpn_enabled = false;
+
+    jint env_status = g_vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6);
+    if (env_status == JNI_EDETACHED) {
+        if (g_vm->AttachCurrentThread(&env, nullptr) != JNI_OK || env == nullptr) {
+            return false;
+        }
+        attached_by_this_function = true;
+    } else if (env_status != JNI_OK || env == nullptr) {
+        return false;
+    }
+
+    jclass ctx = nullptr;
+    jobject context = nullptr;
+    jstring str = nullptr;
+    jobject conn_service = nullptr;
+    jclass connectivity = nullptr;
+    jclass capabils = nullptr;
+    jobject activenetwork = nullptr;
+    jobject activecapabilities = nullptr;
+
+    ctx = env->FindClass("android/content/Context");
+    if (!ctx) goto cleanup;
+
+    context = getJNIContext(env);
+    if (!context) goto cleanup;
+
     jmethodID service = env->GetMethodID(ctx, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;");
-    jstring str = env->NewStringUTF("connectivity");
-    jobject conn_service = env->CallObjectMethod(context, service, str);
-    env->DeleteLocalRef(str);
-    jclass connectivity = env->FindClass("android/net/ConnectivityManager");
-    jclass capabils = env->FindClass("android/net/NetworkCapabilities");
+    if (!service) goto cleanup;
+
+    str = env->NewStringUTF("connectivity");
+    if (!str) goto cleanup;
+
+    conn_service = env->CallObjectMethod(context, service, str);
+    if (!conn_service) goto cleanup;
+
+    connectivity = env->FindClass("android/net/ConnectivityManager");
+    if (!connectivity) goto cleanup;
+
+    capabils = env->FindClass("android/net/NetworkCapabilities");
+    if (!capabils) goto cleanup;
+
     jmethodID has1 = env->GetMethodID(capabils, "hasCapability", "(I)Z");
     jmethodID has = env->GetMethodID(capabils, "hasTransport", "(I)Z");
     jmethodID getCapabil = env->GetMethodID(connectivity, "getNetworkCapabilities", "(Landroid/net/Network;)Landroid/net/NetworkCapabilities;");
     jmethodID getActive = env->GetMethodID(connectivity, "getActiveNetwork", "()Landroid/net/Network;");
-    jobject activenetwork = env->CallObjectMethod(conn_service, getActive);
-    if (!activenetwork) {
-        env->DeleteLocalRef(conn_service);
-        env->DeleteLocalRef(ctx);
-        env->DeleteLocalRef(context);
-        env->DeleteLocalRef(capabils);
-        env->DeleteLocalRef(connectivity);
-        return false;
-    }
+    if (!has1 || !has || !getCapabil || !getActive) goto cleanup;
 
-    jobject activecapabilities = env->CallObjectMethod(conn_service, getCapabil, activenetwork);
-    if (!activecapabilities) {
-        env->DeleteLocalRef(activenetwork);
-        env->DeleteLocalRef(conn_service);
-        env->DeleteLocalRef(ctx);
-        env->DeleteLocalRef(context);
-        env->DeleteLocalRef(capabils);
-        env->DeleteLocalRef(connectivity);
-        return false;
-    }
+    activenetwork = env->CallObjectMethod(conn_service, getActive);
+    if (!activenetwork) goto cleanup;
+
+    activecapabilities = env->CallObjectMethod(conn_service, getCapabil, activenetwork);
+    if (!activecapabilities) goto cleanup;
+
     jboolean hasvpn1 = env->CallBooleanMethod(activecapabilities, has, 4);
     jboolean hasvpn2 = env->CallBooleanMethod(activecapabilities, has1, 4);
-    if (hasvpn1 || hasvpn2) {
-        env->DeleteLocalRef(activenetwork);
-        env->DeleteLocalRef(activecapabilities);
-        env->DeleteLocalRef(conn_service);
-        env->DeleteLocalRef(ctx);
-        env->DeleteLocalRef(context);
-        env->DeleteLocalRef(capabils);
-        env->DeleteLocalRef(connectivity);
-        return true;
-    } else {
-        env->DeleteLocalRef(activenetwork);
-        env->DeleteLocalRef(activecapabilities);
-        env->DeleteLocalRef(conn_service);
-        env->DeleteLocalRef(ctx);
-        env->DeleteLocalRef(context);
-        env->DeleteLocalRef(capabils);
-        env->DeleteLocalRef(connectivity);
-        return false;
+    vpn_enabled = (hasvpn1 || hasvpn2);
+
+cleanup:
+    if (activecapabilities) env->DeleteLocalRef(activecapabilities);
+    if (activenetwork) env->DeleteLocalRef(activenetwork);
+    if (capabils) env->DeleteLocalRef(capabils);
+    if (connectivity) env->DeleteLocalRef(connectivity);
+    if (conn_service) env->DeleteLocalRef(conn_service);
+    if (str) env->DeleteLocalRef(str);
+    if (context) env->DeleteLocalRef(context);
+    if (ctx) env->DeleteLocalRef(ctx);
+
+    if (attached_by_this_function) {
+        g_vm->DetachCurrentThread();
     }
+
+    return vpn_enabled;
 }
 
 
