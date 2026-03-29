@@ -590,37 +590,46 @@ static inline ImU32 GetObjectiveAlertGradientColor(float ratio, int alpha = 255)
 static inline void DrawObjectiveAlertCard(ImDrawList *draw, int objectiveId, int hp, int hpMax, float screenWidth, float screenHeight) {
     if (hpMax <= 0) return;
     float ratio = std::max(0.0f, std::min(1.0f, (float)hp / (float)hpMax));
-    const char *alertText = (objectiveId == 2002) ? "TURTLE IS UNDER ATTACK" : "LORD IS UNDER ATTACK";
+    // In this build: 2002 = Lord, 2003 = Turtle (see MonsterToString mapping).
+    const bool isLord = (objectiveId == 2002);
+    const char *alertText = isLord ? "LORD IS UNDER ATTACK" : "TURTLE IS UNDER ATTACK";
 
-    // Place alert anchored to minimap (right side + slight vertical offset).
-    const float gapX = 10.0f;
-    const float offsetY = 8.0f;
-    ImVec2 cardTopLeft(minimapPosX + minimapWidth + gapX, minimapPosY + offsetY);
+    // Place alert above the minimap zoom icon (right side of minimap).
     float cardWidth = std::clamp(screenWidth * 0.22f, 240.0f, 420.0f);
     float cardHeight = std::clamp(screenHeight * 0.09f, 60.0f, 120.0f);
     ImVec2 cardSize(cardWidth, cardHeight);
+    const float zoomAnchorX = minimapPosX + minimapWidth + std::clamp(minimapWidth * 0.05f, 10.0f, 20.0f);
+    const float zoomAnchorY = minimapPosY + minimapHeight * 0.50f;
+    // Stick card to the right edge of minimap (no visual horizontal gap).
+    ImVec2 cardTopLeft(minimapPosX + minimapWidth - 2.0f, zoomAnchorY - cardSize.y - std::clamp(cardSize.y * 0.14f, 10.0f, 18.0f));
     ImVec2 cardBottomRight(cardTopLeft.x + cardSize.x, cardTopLeft.y + cardSize.y);
 
-    // Bubble-style panel: rounded main body + small tail at bottom-left.
+    // Bubble-style panel: rounded main body + pointer tail to minimap zoom area.
     const float cardRounding = std::clamp(cardSize.y * 0.12f, 6.0f, 12.0f);
     const ImU32 bubbleFill = IM_COL32(16, 20, 28, 210);
     const ImU32 bubbleBorder = IM_COL32(0, 0, 0, 210);
     draw->AddRectFilled(cardTopLeft, cardBottomRight, bubbleFill, cardRounding);
     draw->AddRect(cardTopLeft, cardBottomRight, bubbleBorder, cardRounding, 0, 1.4f);
 
-    const float tailWidth = std::clamp(cardSize.x * 0.11f, 18.0f, 38.0f);
-    const float tailHeight = std::clamp(cardSize.y * 0.18f, 8.0f, 20.0f);
-    const float tailInsetX = std::clamp(cardSize.x * 0.08f, 14.0f, 34.0f);
+    const float tailHalfHeight = std::clamp(cardSize.y * 0.14f, 8.0f, 18.0f);
+    // Pin tail tip directly onto the zoom icon area (right edge of minimap).
+    const float minimapZoomTargetX = zoomAnchorX;
+    const float minimapZoomTargetY = minimapPosY + minimapHeight * 0.52f;
+    const float tailCenterY = std::clamp(minimapZoomTargetY, cardTopLeft.y + cardRounding + tailHalfHeight, cardBottomRight.y - cardRounding - tailHalfHeight);
     ImVec2 tailPoly[3] = {
-        ImVec2(cardTopLeft.x + tailInsetX, cardBottomRight.y - 1.0f),
-        ImVec2(cardTopLeft.x + tailInsetX + tailWidth, cardBottomRight.y - 1.0f),
-        ImVec2(cardTopLeft.x + tailInsetX + tailWidth * 0.24f, cardBottomRight.y + tailHeight)
+        ImVec2(cardTopLeft.x + 1.0f, tailCenterY - tailHalfHeight),
+        ImVec2(cardTopLeft.x + 1.0f, tailCenterY + tailHalfHeight),
+        ImVec2(minimapZoomTargetX, minimapZoomTargetY)
     };
     draw->AddConvexPolyFilled(tailPoly, 3, bubbleFill);
     draw->AddPolyline(tailPoly, 3, bubbleBorder, ImDrawFlags_Closed, 1.4f);
 
     // Alert image (use raw icon color; no gradient tint so base64 image is not distorted).
     Icon alertIcon = MonsterAlertTexture(objectiveId);
+    if (!alertIcon.IsValid) {
+        // Fallback to objective portrait icon to avoid empty square.
+        alertIcon = MonsterTexture(objectiveId);
+    }
     const float imagePadding = std::clamp(cardHeight * 0.08f, 4.0f, 8.0f);
     ImVec2 imageTopLeft(cardTopLeft.x + imagePadding, cardTopLeft.y + imagePadding);
     float imageSize = cardSize.y - imagePadding * 2.0f;
