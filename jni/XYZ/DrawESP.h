@@ -1,6 +1,9 @@
 #pragma once
 #include <algorithm>
 #include <chrono>
+#include <cmath>
+#include <string>
+#include <unordered_map>
 
 extern bool bFullChecked;
 
@@ -573,8 +576,29 @@ struct RetriTargetEvalResult {
     int targetGuid = 0;
     int targetId = 0;
     int targetHp = 0;
+    int targetHpMax = 0;
     float targetDistance = 0.0f;
+    bool targetInRange = false;
+    bool spellReady = false;
+    bool sameCampType = false;
 };
+
+static inline float ComputeRetributionCastDistance(const Vector3 &selfPos, const Vector3 &targetPos) {
+    // Keep this aligned with skill-cast world-space range checks (XZ plane), not minimap/screen distance.
+    const float dx = selfPos.x - targetPos.x;
+    const float dz = selfPos.z - targetPos.z;
+    return std::sqrt((dx * dx) + (dz * dz));
+}
+
+static inline bool ShouldLogAutoRetriDebug(const std::string &key, int64_t nowMs, int64_t cooldownMs = 5000) {
+    static std::unordered_map<std::string, int64_t> s_lastLogTickByKey;
+    auto it = s_lastLogTickByKey.find(key);
+    if (it != s_lastLogTickByKey.end() && (nowMs - it->second) < cooldownMs) {
+        return false;
+    }
+    s_lastLogTickByKey[key] = nowMs;
+    return true;
+}
 
 static inline RetriTargetEvalResult EvaluateRetriTarget(uintptr_t battleManager, uintptr_t localPlayerShow) {
     RetriTargetEvalResult result{};
@@ -585,7 +609,11 @@ static inline RetriTargetEvalResult EvaluateRetriTarget(uintptr_t battleManager,
 
     auto selfPos = *(Vector3 *) (localPlayerShow + ShowEntity__Position());
     const int retriDamageCurrentLevel = GetRetributionDamageCurrentLevel(localPlayerShow);
+    const int selfGuid = *(int *) (localPlayerShow + EntityBase_m_uGuid());
+    const bool spellReady = IsRetributionSpellReady(selfGuid, localPlayerShow);
     constexpr float kRetributionRange = 6.0f;
+    const int64_t nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
 
     for (int i = 0; i < m_dicMonsterShow->getNumKeys(); i++) {
         auto values = m_dicMonsterShow->getValues()[i];
@@ -604,15 +632,20 @@ static inline RetriTargetEvalResult EvaluateRetriTarget(uintptr_t battleManager,
         if (!IsRetriTargetAllowed(jungleTypeId, sameCampType)) continue;
 
         auto m_Hp = *(int *) ((uintptr_t)values + EntityBase_m_Hp());
+        auto m_HpMax = *(int *) ((uintptr_t)values + EntityBase_m_HpMax());
         auto _Position = *(Vector3 *) ((uintptr_t)values + ShowEntity__Position());
         bool hpValid = m_Hp > 0;
         bool posValid = _Position.x != 0.0f || _Position.y != 0.0f || _Position.z != 0.0f;
         if (!hpValid || !posValid) continue;
 
-        float targetDistance = Vector3::Distance(selfPos, _Position);
+        float targetDistance = ComputeRetributionCastDistance(selfPos, _Position);
         bool inRange = targetDistance <= kRetributionRange;
         bool lethal = m_Hp <= retriDamageCurrentLevel;
-        if (!inRange || !lethal) continue;
+        if (lethal && ShouldLogAutoRetriDebug("pre-cast-state-" + std::to_string(jungleTypeId), nowMs, 7000)) {
+            LOGI("[Debug][AutoRetri] pre-cast monsterId=%d hp=%d hpMax=%d retriDamage=%d distance=%.2f inRange=%d spellReady=%d sameCampType=%d",
+                 jungleTypeId, m_Hp, m_HpMax, retriDamageCurrentLevel, targetDistance, inRange, spellReady, sameCampType);
+        }
+        if (!inRange || !lethal || !spellReady) continue;
 
         int targetGuid = *(int *) ((uintptr_t)values + EntityBase_m_uGuid());
         if (!targetGuid) continue;
@@ -621,7 +654,11 @@ static inline RetriTargetEvalResult EvaluateRetriTarget(uintptr_t battleManager,
         result.targetGuid = targetGuid;
         result.targetId = jungleTypeId;
         result.targetHp = m_Hp;
+        result.targetHpMax = m_HpMax;
         result.targetDistance = targetDistance;
+        result.targetInRange = inRange;
+        result.spellReady = spellReady;
+        result.sameCampType = sameCampType;
         return result;
     }
 
@@ -662,9 +699,20 @@ static inline bool TryCastRetribution(uintptr_t battleManager, uintptr_t localPl
     }
 
     int outState = 0;
-    const bool casted = CallShowSelfPlayer_TryUseSkillOutState12((void *)localPlayerShow, &outState, 5, targetGuid, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-    LOGI("[Debug][AutoRetri] cast-attempt targetGuid=%d targetId=%d hp=%d dist=%.2f result=%d outState=%d",
-         targetGuid, eval.targetId, eval.targetHp, eval.targetDistance, casted, outState);
+    constexpr int kRetributionSpellSlotIndex = 5;
+    const bool casted = CallShowSelfPlayer_TryUseSkillOutState12(
+        (void *)localPlayerShow, &outState, kRetributionSpellSlotIndex, targetGuid, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    const int64_t nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+    if (ShouldLogAutoRetriDebug("cast-result-" + std::to_string(targetGuid), nowMs, 7000)) {
+        LOGI("[Debug][AutoRetri] cast-result status=%s reasonCode=%d targetGuid=%d targetId=%d hp=%d hpMax=%d dist=%.2f inRange=%d spellReady=%d sameCampType=%d castApiTarget=entityId castApiSpellSlot=%d",
+             casted ? "success" : "fail", outState, targetGuid, eval.targetId, eval.targetHp, eval.targetHpMax,
+             eval.targetDistance, eval.targetInRange, eval.spellReady, eval.sameCampType, kRetributionSpellSlotIndex);
+        if (eval.targetInRange && !casted) {
+            LOGI("[Debug][AutoRetri] cast-fail-diagnostic reasonCode=%d check-api-target=entityId-vs-worldPosition check-api-spell-slot=current=%d",
+                 outState, kRetributionSpellSlotIndex);
+        }
+    }
     return casted;
 }
 
