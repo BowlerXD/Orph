@@ -293,8 +293,6 @@ DefineHook(void, UpdateMapHack, (void * pThis)) {
                         if (canSight) continue;
                         auto m_uGuid = *(int *) ((uintptr_t)Pawn + EntityBase_m_uGuid());
                         auto _Position = *(Vector3 *) ((uintptr_t)Pawn + ShowEntity__Position());
-                        auto *m_HeadIcon = *(String **) ((uintptr_t) Pawn + ShowEntity_m_HeadIcon);
-                        
                         if (Config.Visual.MonsterIcon || (Config.MinimapIcon && isSoldier)) {
                             auto SetMapEntityIconPos = (void (*)(void *, Vector3, int, bool)) (BattleBridge_SetMapEntityIconPos);
                             auto SetMapInvisibility = (void (*)(void *, int, bool, bool)) (BattleBridge_SetMapInvisibility);                            

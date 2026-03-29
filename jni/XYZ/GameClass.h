@@ -389,7 +389,7 @@ uintptr_t BattleBridge_bStartBattle(){
 	return (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "BattleBridge", "bStartBattle");
 }
 
-//--------------------------------> TEST NEW MAPHACK <--------------------------------
+// Maphack runtime bridge methods
 #define MapEntityContainer_SetMapEntityIconPos (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "MapEntityContainer", "SetMapEntityIconPos", 3)
 
 #define BattleBridge_SetMapEntityIconPos (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "BattleBridge", "SetMapEntityIconPos", 3)
