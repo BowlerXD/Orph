@@ -548,24 +548,6 @@ struct RuntimeBattleSpellInfo {
     bool valid = false;
 };
 
-static inline const char *AutoRetriSpellNameById(int spellId) {
-    switch (spellId) {
-        case 20150: return "Execute";
-        case 20020: return "Retribution";
-        case 20030: return "Inspire";
-        case 20040: return "Sprint";
-        case 20050: return "Revitalize";
-        case 20060: return "Aegis";
-        case 20070: return "Petrify";
-        case 20080: return "Purify";
-        case 20140: return "Flameshot";
-        case 20100: return "Flicker";
-        case 20160: return "Arrival";
-        case 20190: return "Vengeance";
-        default: return nullptr;
-    }
-}
-
 static inline RuntimeBattleSpellInfo GetRuntimeBattleSpellInfo(uintptr_t localPlayerShow) {
     RuntimeBattleSpellInfo info{};
     if (!localPlayerShow) return info;
@@ -660,16 +642,6 @@ static inline float ComputeRetributionCastDistance(const Vector3 &selfPos, const
     return std::sqrt((dx * dx) + (dz * dz));
 }
 
-static inline bool ShouldLogAutoRetriDebug(const std::string &key, int64_t nowMs, int64_t cooldownMs = 5000) {
-    static std::unordered_map<std::string, int64_t> s_lastLogTickByKey;
-    auto it = s_lastLogTickByKey.find(key);
-    if (it != s_lastLogTickByKey.end() && (nowMs - it->second) < cooldownMs) {
-        return false;
-    }
-    s_lastLogTickByKey[key] = nowMs;
-    return true;
-}
-
 static inline RetriTargetEvalResult EvaluateRetriTarget(uintptr_t battleManager, uintptr_t localPlayerShow) {
     RetriTargetEvalResult result{};
     if (!battleManager || !localPlayerShow) return result;
@@ -682,9 +654,6 @@ static inline RetriTargetEvalResult EvaluateRetriTarget(uintptr_t battleManager,
     const int selfGuid = *(int *) (localPlayerShow + EntityBase_m_uGuid());
     const bool spellReady = IsRetributionSpellReady(selfGuid, localPlayerShow);
     constexpr float kRetributionRange = 6.0f;
-    const int64_t nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count();
-
     for (int i = 0; i < m_dicMonsterShow->getNumKeys(); i++) {
         auto values = m_dicMonsterShow->getValues()[i];
         if (!values) continue;
@@ -711,19 +680,10 @@ static inline RetriTargetEvalResult EvaluateRetriTarget(uintptr_t battleManager,
         float targetDistance = ComputeRetributionCastDistance(selfPos, _Position);
         bool inRange = targetDistance <= kRetributionRange;
         bool lethal = m_Hp <= retriDamageCurrentLevel;
-        if (lethal && ShouldLogAutoRetriDebug("pre-cast-state-" + std::to_string(jungleTypeId), nowMs, 7000)) {
-            LOGI("[Debug][AutoRetri] pre-cast monsterId=%d hp=%d hpMax=%d retriDamage=%d distance=%.2f inRange=%d spellReady=%d sameCampType=%d",
-                 jungleTypeId, m_Hp, m_HpMax, retriDamageCurrentLevel, targetDistance, inRange, spellReady, sameCampType);
-        }
         if (!inRange || !lethal || !spellReady) continue;
 
         const uint64_t targetGuid = *(uint64_t *) ((uintptr_t)values + EntityBase_m_uGuid());
         if (!targetGuid) continue;
-
-        if (ShouldLogAutoRetriDebug("candidate-guid-" + std::to_string((unsigned long long)targetGuid), nowMs, 3500)) {
-            LOGI("[Debug][AutoRetri] pre-cast-target monsterTypeId=%d runtimeTargetGuid=%" PRIu64 " (0x%016" PRIx64 ") entityPtr=%p",
-                 jungleTypeId, targetGuid, targetGuid, (void *)values);
-        }
 
         result.found = true;
         result.targetGuid = targetGuid;
@@ -747,48 +707,30 @@ static inline bool TryCastRetribution(uintptr_t battleManager, uintptr_t localPl
     Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleData", "m_BattleBridge", &battleBridgeInstance);
     Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
     if (!battleBridgeInstance || !battleManagerInstance || !battleManager || !localPlayerShow || !targetGuid) {
-        LOGI("[Debug][AutoRetri] cast-skip reason=invalid-context");
         return false;
     }
 
     RuntimeBattleSpellInfo spellInfo = GetRuntimeBattleSpellInfo(localPlayerShow);
     if (spellInfo.spellId != 20020) {
-        LOGI("[Debug][AutoRetri] cast-skip reason=active-spell-not-retribution spellId=%d slot=%d",
-             spellInfo.spellId, spellInfo.spellSlot);
         return false;
     }
     if (!spellInfo.valid || spellInfo.spellSlot < 0) {
-        LOGI("[Debug][AutoRetri] cast-skip reason=spell-slot-not-found spellId=%d", spellInfo.spellId);
         return false;
     }
     const bool localPlayerDead = *(bool *) (localPlayerShow + EntityBase_m_bDeath());
     const bool localPlayerDisabled = get_InTransformation((void *)localPlayerShow);
     if (localPlayerDead || localPlayerDisabled) {
-        LOGI("[Debug][AutoRetri] cast-skip reason=player-unavailable dead=%d disabled=%d", localPlayerDead, localPlayerDisabled);
         return false;
     }
 
     const int selfGuid = *(int *) (localPlayerShow + EntityBase_m_uGuid());
     if (!IsRetributionSpellReady(selfGuid, localPlayerShow)) {
-        LOGI("[Debug][AutoRetri] cast-skip reason=spell-cooldown");
         return false;
     }
 
     RetriTargetEvalResult eval = EvaluateRetriTarget(battleManager, localPlayerShow);
     if (!eval.found || eval.targetGuid != targetGuid) {
-        LOGI("[Debug][AutoRetri] cast-skip reason=target-invalid targetGuid=%" PRIu64 " (0x%016" PRIx64 ")", targetGuid, targetGuid);
         return false;
-    }
-
-    static uint64_t s_lastCastTargetGuid = 0;
-    static uintptr_t s_lastCastEntityPtr = 0;
-    const uintptr_t currentEntityPtr = eval.targetEntityPtr;
-    if (s_lastCastTargetGuid != 0 && s_lastCastTargetGuid == targetGuid) {
-        LOGI("[Debug][AutoRetri] target-guid-stability stable=1 runtimeTargetGuid=%" PRIu64 " (0x%016" PRIx64 ") prevMarker=%p currMarker=%p",
-             targetGuid, targetGuid, (void *)s_lastCastEntityPtr, (void *)currentEntityPtr);
-    } else if (s_lastCastTargetGuid != 0 && s_lastCastTargetGuid != targetGuid) {
-        LOGI("[Debug][AutoRetri] target-guid-stability stable=0 prevGuid=%" PRIu64 " (0x%016" PRIx64 ") currGuid=%" PRIu64 " (0x%016" PRIx64 ")",
-             s_lastCastTargetGuid, s_lastCastTargetGuid, targetGuid, targetGuid);
     }
 
     // dump.cs: ShowSelfPlayer.TryUseSkill(... skillId, ... firstTarget ...)
@@ -804,19 +746,8 @@ static inline bool TryCastRetribution(uintptr_t battleManager, uintptr_t localPl
         (void *)localPlayerShow, &outState,
         autoArgs.p1, autoArgs.p2, autoArgs.p3, autoArgs.p4, autoArgs.p5, autoArgs.p6,
         autoArgs.p7, autoArgs.p8, autoArgs.p9, autoArgs.p10, autoArgs.p11);
-    const int64_t nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count();
-    if (ShouldLogAutoRetriDebug("cast-result-" + std::to_string((unsigned long long)targetGuid), nowMs, 7000)) {
-        LOGI("[Debug][AutoRetri] cast-result status=%s reasonCode=%d targetGuid=%" PRIu64 " (0x%016" PRIx64 ") targetId=%d hp=%d hpMax=%d dist=%.2f inRange=%d spellReady=%d sameCampType=%d castSkillId=%d castApiSpellSlot=%d",
-             casted ? "success" : "fail", outState, targetGuid, targetGuid, eval.targetId, eval.targetHp, eval.targetHpMax,
-             eval.targetDistance, eval.targetInRange, eval.spellReady, eval.sameCampType, castSkillId, spellInfo.spellSlot);
-        if (eval.targetInRange && !casted) {
-            LOGI("[Debug][AutoRetri] cast-fail-diagnostic reasonCode=%d check-api-target=entityId-vs-worldPosition check-api-spell-slot=current=%d",
-                 outState, spellInfo.spellSlot);
-        }
-    }
-    s_lastCastTargetGuid = targetGuid;
-    s_lastCastEntityPtr = currentEntityPtr;
+    (void)outState;
+    (void)eval;
     return casted;
 }
 
@@ -863,18 +794,6 @@ static inline void UpdateAutoRetribution() {
     }
     s_lastBattleManagerTracked = battleManager;
     s_lastSelfGuidTracked = selfGuid;
-
-    static uintptr_t s_lastBattleManagerForLog = 0;
-    static bool s_hasLoggedBattleSpellInfo = false;
-    if (!s_hasLoggedBattleSpellInfo || s_lastBattleManagerForLog != battleManager) {
-        RuntimeBattleSpellInfo spellInfo = GetRuntimeBattleSpellInfo(m_LocalPlayerShow);
-        const char *spellName = AutoRetriSpellNameById(spellInfo.spellId);
-        LOGI("[Debug][AutoRetri] match-spell-info detectedBattleSpellId=%d detectedBattleSpellSlot=%d retriCommandCode=%d retriCommandCodeResolved=%d detectedBattleSpellName=%s",
-             spellInfo.spellId, spellInfo.spellSlot, spellInfo.retriCommandCode, spellInfo.retriCommandCodeResolved,
-             spellName ? spellName : "unknown");
-        s_lastBattleManagerForLog = battleManager;
-        s_hasLoggedBattleSpellInfo = true;
-    }
 
     RuntimeBattleSpellInfo activeSpellInfo = GetRuntimeBattleSpellInfo(m_LocalPlayerShow);
     if (s_lastSpellIdTracked != -1 && s_lastSpellIdTracked != activeSpellInfo.spellId) {
