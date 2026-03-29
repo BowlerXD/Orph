@@ -549,6 +549,13 @@ static inline bool IsSelectedAutoRetriMonster(int monsterId) {
     return false;
 }
 
+static inline bool IsRetriTargetAllowed(int monsterId, bool sameCampType) {
+    // Auto retri must be independent from visual enemy-only filters:
+    // sameCampType remains accepted as long as the objective is enabled in menu.
+    (void)sameCampType;
+    return IsSelectedAutoRetriMonster(monsterId);
+}
+
 static inline int GetRetributionDamageCurrentLevel(uintptr_t localPlayerShow) {
     if (!localPlayerShow) return 0;
     int level = *(int *) ((uintptr_t)localPlayerShow + EntityBase_m_Level());
@@ -592,8 +599,9 @@ static inline RetriTargetEvalResult EvaluateRetriTarget(uintptr_t battleManager,
         bool isWildMonster = *(bool *) ((uintptr_t)values + ShowEntity_IsWildMonster);
         int jungleTypeId = bMonster(new_mID) ? new_mID : m_ID;
         bool isJungleMonster = isWildMonster && bMonster(jungleTypeId);
+        const bool sameCampType = *(bool *) ((uintptr_t)values + EntityBase_m_bSameCampType());
         if (!isJungleMonster) continue;
-        if (!IsSelectedAutoRetriMonster(jungleTypeId)) continue;
+        if (!IsRetriTargetAllowed(jungleTypeId, sameCampType)) continue;
 
         auto m_Hp = *(int *) ((uintptr_t)values + EntityBase_m_Hp());
         auto _Position = *(Vector3 *) ((uintptr_t)values + ShowEntity__Position());
