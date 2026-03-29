@@ -599,9 +599,23 @@ static inline void DrawObjectiveAlertCard(ImDrawList *draw, int objectiveId, int
     ImVec2 cardSize(cardWidth, cardHeight);
     ImVec2 cardBottomRight(cardTopLeft.x + cardSize.x, cardTopLeft.y + cardSize.y);
 
-    // Clean panel behind content (no custom stepped bubble).
-    draw->AddRectFilled(cardTopLeft, cardBottomRight, IM_COL32(16, 20, 28, 210), 8.0f);
-    draw->AddRect(cardTopLeft, cardBottomRight, IM_COL32(0, 0, 0, 210), 8.0f, 0, 1.4f);
+    // Bubble-style panel: rounded main body + small tail at bottom-left.
+    const float cardRounding = std::clamp(cardSize.y * 0.12f, 6.0f, 12.0f);
+    const ImU32 bubbleFill = IM_COL32(16, 20, 28, 210);
+    const ImU32 bubbleBorder = IM_COL32(0, 0, 0, 210);
+    draw->AddRectFilled(cardTopLeft, cardBottomRight, bubbleFill, cardRounding);
+    draw->AddRect(cardTopLeft, cardBottomRight, bubbleBorder, cardRounding, 0, 1.4f);
+
+    const float tailWidth = std::clamp(cardSize.x * 0.11f, 18.0f, 38.0f);
+    const float tailHeight = std::clamp(cardSize.y * 0.18f, 8.0f, 20.0f);
+    const float tailInsetX = std::clamp(cardSize.x * 0.08f, 14.0f, 34.0f);
+    ImVec2 tailPoly[3] = {
+        ImVec2(cardTopLeft.x + tailInsetX, cardBottomRight.y - 1.0f),
+        ImVec2(cardTopLeft.x + tailInsetX + tailWidth, cardBottomRight.y - 1.0f),
+        ImVec2(cardTopLeft.x + tailInsetX + tailWidth * 0.24f, cardBottomRight.y + tailHeight)
+    };
+    draw->AddConvexPolyFilled(tailPoly, 3, bubbleFill);
+    draw->AddPolyline(tailPoly, 3, bubbleBorder, ImDrawFlags_Closed, 1.4f);
 
     // Alert image (use raw icon color; no gradient tint so base64 image is not distorted).
     Icon alertIcon = MonsterAlertTexture(objectiveId);
