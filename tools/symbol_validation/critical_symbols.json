@@ -1,0 +1,24 @@
+[
+  {"type":"class","namespace":"Battle","class":"LogicPlayer"},
+  {"type":"field","namespace":"Battle","class":"LogicPlayer","name":"_KillWildTimes"},
+  {"type":"field","namespace":"Battle","class":"LogicPlayer","name":"m_PlayerData"},
+  {"type":"method","namespace":"Battle","class":"LogicPlayer","name":"LogicUpdate","arg_count":1},
+
+  {"type":"class","namespace":"","class":"LogicBattleManager"},
+  {"type":"method","namespace":"","class":"LogicBattleManager","name":"GetBattleState","arg_count":0},
+  {"type":"method","namespace":"","class":"LogicBattleManager","name":"GetPlayerLogic","arg_count":1},
+  {"type":"method","namespace":"","class":"LogicBattleManager","name":"GetPlayerRealSelf","arg_count":0},
+  {"type":"field","namespace":"","class":"LogicBattleManager","name":"m_iMemState"},
+
+  {"type":"method","namespace":"","class":"ShowSelfPlayer","name":"TryUseSkill","arg_count":10},
+
+  {"type":"class","namespace":"UnityEngine","class":"Transform"},
+  {"type":"method","namespace":"UnityEngine","class":"Transform","name":"get_position","arg_count":0},
+  {"type":"method","namespace":"UnityEngine","class":"Transform","name":"get_localPosition","arg_count":0},
+  {"type":"method","namespace":"UnityEngine","class":"Transform","name":"set_position","arg_count":1},
+
+  {"type":"class","namespace":"Battle","class":"Bullet"},
+  {"type":"field","namespace":"Battle","class":"Bullet","name":"m_Id"},
+  {"type":"field","namespace":"Battle","class":"Bullet","name":"m_Target"},
+  {"type":"field","namespace":"Battle","class":"Bullet","name":"transform"}
+]
