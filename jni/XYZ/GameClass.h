@@ -198,20 +198,20 @@ uintptr_t VirtualButton_m_States(){
 	return (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "VirtualButton", "m_States");
 }
 
-// dump: ShowSelfPlayer.TryUseSkill(out state, ...) -> overload argCount 10
+// dump: ShowSelfPlayer.TryUseSkill(skillId, ...) -> overload argCount 9
 inline uintptr_t ResolveShowSelfPlayer_TryUseSkill2() {
     static bool loggedResolved = false;
     static bool loggedMissing = false;
-    uintptr_t method = (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowSelfPlayer", "TryUseSkill", 10);
+    uintptr_t method = (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowSelfPlayer", "TryUseSkill", 9);
     if (!method) {
         if (!loggedMissing) {
-            LOGW("[TryUseSkill] resolve failed for ShowSelfPlayer::TryUseSkill overload (argCount=10), skipping call.");
+            LOGW("[TryUseSkill] resolve failed for ShowSelfPlayer::TryUseSkill overload (argCount=9), skipping call.");
             loggedMissing = true;
         }
         return 0;
     }
     if (!loggedResolved) {
-        LOGI("[TryUseSkill] resolved ShowSelfPlayer::TryUseSkill overload (argCount=10) at %p", (void *) method);
+        LOGI("[TryUseSkill] resolved ShowSelfPlayer::TryUseSkill overload (argCount=9) at %p", (void *) method);
         loggedResolved = true;
     }
     return method;
@@ -236,7 +236,7 @@ inline uintptr_t ResolveShowSelfPlayer_TryUseSkill() {
     return method;
 }
 
-// callsite cast for TryUseSkill(out state, ...) overload with 12 managed args from latest dump
+// callsite cast for TryUseSkill(out state, ...) overload with 12 managed args from the current dump
 using ShowSelfPlayerTryUseSkillOutState12Fn = bool (*)(
         void *thiz,
         int *outState,
@@ -746,17 +746,17 @@ Dictionary<void*, void*> *get_Monsters(){
 //--------------------------------> TEST NEW ANTICHEATS <--------------------------------
 //--------------------------------> TEST NEW ANTICHEATS <--------------------------------
 //--------------------------------> TEST NEW ANTICHEATS <--------------------------------
-#define ACInterface_GetTimeOfDay (uintptr_t) Il2CppGetMethodOffset("Assebly-CSharp.dll", "", "ACInterface", "GetTimeOfDay", 4)
-#define ACInterface_GetSystemTime (uintptr_t) Il2CppGetMethodOffset("Assebly-CSharp.dll", "", "ACInterface", "GetSystemTime", 2)
-#define ACInterface_EstimateGetTimeOfDay (uintptr_t) Il2CppGetMethodOffset("Assebly-CSharp.dll", "", "ACInterface", "EstimateGetTimeOfDay", 1)
-#define ACInterface_EstimateGetSystemTime (uintptr_t) Il2CppGetMethodOffset("Assebly-CSharp.dll", "", "ACInterface", "EstimateGetSystemTime", 1)
-#define ACInterface_LoadCert (uintptr_t) Il2CppGetMethodOffset("Assebly-CSharp.dll", "", "ACInterface", "LoadCert", 2)
-#define ACInterface_GetSign (uintptr_t) Il2CppGetMethodOffset("Assebly-CSharp.dll", "", "ACInterface", "GetSign")
-#define ACInterface_ValidateCer (uintptr_t) Il2CppGetMethodOffset("Assebly-CSharp.dll", "", "ACInterface", "ValidateCer", 1)
-#define ACInterface_GetSignMapData (uintptr_t) Il2CppGetMethodOffset("Assebly-CSharp.dll", "", "ACInterface", "GetSignMapData")
-#define ACInterface_SignErrorVerify (uintptr_t) Il2CppGetMethodOffset("Assebly-CSharp.dll", "", "ACInterface", "SignErrorVerify", 2)
-#define ACInterface_CheckHook (uintptr_t) Il2CppGetMethodOffset("Assebly-CSharp.dll", "", "ACInterface", "CheckHook")
-#define ACInterface_GetHeroDefaultSkinMd5 (uintptr_t) Il2CppGetMethodOffset("Assebly-CSharp.dll", "", "ACInterface", "GetHeroDefaultSkinMd5")
+#define ACInterface_GetTimeOfDay (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ACInterface", "GetTimeOfDay", 4)
+#define ACInterface_GetSystemTime (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ACInterface", "GetSystemTime", 2)
+#define ACInterface_EstimateGetTimeOfDay (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ACInterface", "EstimateGetTimeOfDay", 1)
+#define ACInterface_EstimateGetSystemTime (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ACInterface", "EstimateGetSystemTime", 1)
+#define ACInterface_LoadCert (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ACInterface", "LoadCert", 2)
+#define ACInterface_GetSign (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ACInterface", "GetSign")
+#define ACInterface_ValidateCer (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ACInterface", "ValidateCer", 1)
+#define ACInterface_GetSignMapData (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ACInterface", "GetSignMapData")
+#define ACInterface_SignErrorVerify (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ACInterface", "SignErrorVerify", 2)
+#define ACInterface_CheckHook (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ACInterface", "CheckHook")
+#define ACInterface_GetHeroDefaultSkinMd5 (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ACInterface", "GetHeroDefaultSkinMd5")
 
 uintptr_t ShowBattleControl_SetAntiCheatReport(){
 	return (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowBattleControl", "SetAntiCheatReport",1);
