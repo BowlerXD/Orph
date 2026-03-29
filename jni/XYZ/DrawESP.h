@@ -654,7 +654,7 @@ static inline RetriTargetEvalResult EvaluateRetriTarget(uintptr_t battleManager,
         if (!targetGuid) continue;
 
         if (ShouldLogAutoRetriDebug("candidate-guid-" + std::to_string((unsigned long long)targetGuid), nowMs, 3500)) {
-            LOGI("[Debug][AutoRetri] pre-cast-target monsterTypeId=%d runtimeTargetGuid=0x%016" PRIx64 " (%" PRIu64 ") entityPtr=%p",
+            LOGI("[Debug][AutoRetri] pre-cast-target monsterTypeId=%d runtimeTargetGuid=%" PRIu64 " (0x%016" PRIx64 ") entityPtr=%p",
                  jungleTypeId, targetGuid, targetGuid, (void *)values);
         }
 
@@ -703,7 +703,7 @@ static inline bool TryCastRetribution(uintptr_t battleManager, uintptr_t localPl
 
     RetriTargetEvalResult eval = EvaluateRetriTarget(battleManager, localPlayerShow);
     if (!eval.found || eval.targetGuid != targetGuid) {
-        LOGI("[Debug][AutoRetri] cast-skip reason=target-invalid targetGuid=0x%016" PRIx64 " (%" PRIu64 ")", targetGuid, targetGuid);
+        LOGI("[Debug][AutoRetri] cast-skip reason=target-invalid targetGuid=%" PRIu64 " (0x%016" PRIx64 ")", targetGuid, targetGuid);
         return false;
     }
 
@@ -711,24 +711,24 @@ static inline bool TryCastRetribution(uintptr_t battleManager, uintptr_t localPl
     static uintptr_t s_lastCastEntityPtr = 0;
     const uintptr_t currentEntityPtr = eval.targetEntityPtr;
     if (s_lastCastTargetGuid != 0 && s_lastCastTargetGuid == targetGuid) {
-        LOGI("[Debug][AutoRetri] target-guid-stability stable=1 runtimeTargetGuid=0x%016" PRIx64 " (%" PRIu64 ") prevMarker=%p currMarker=%p",
+        LOGI("[Debug][AutoRetri] target-guid-stability stable=1 runtimeTargetGuid=%" PRIu64 " (0x%016" PRIx64 ") prevMarker=%p currMarker=%p",
              targetGuid, targetGuid, (void *)s_lastCastEntityPtr, (void *)currentEntityPtr);
     } else if (s_lastCastTargetGuid != 0 && s_lastCastTargetGuid != targetGuid) {
-        LOGI("[Debug][AutoRetri] target-guid-stability stable=0 prevGuid=0x%016" PRIx64 " (%" PRIu64 ") currGuid=0x%016" PRIx64 " (%" PRIu64 ")",
+        LOGI("[Debug][AutoRetri] target-guid-stability stable=0 prevGuid=%" PRIu64 " (0x%016" PRIx64 ") currGuid=%" PRIu64 " (0x%016" PRIx64 ")",
              s_lastCastTargetGuid, s_lastCastTargetGuid, targetGuid, targetGuid);
     }
 
     int outState = 0;
     constexpr int kRetributionSpellSlotIndex = 5;
-    LOGI("[Debug][AutoRetri] cast-args spellSlot=%d runtimeTargetGuid=0x%016" PRIx64 " (%" PRIu64 ") paramOrder=[slot,targetGuid,p3..p11]",
+    LOGI("[Debug][AutoRetri] cast-args spellSlot=%d runtimeTargetGuid=%" PRIu64 " (0x%016" PRIx64 ") paramOrder=[slot,targetGuid,p3..p11]",
          kRetributionSpellSlotIndex, targetGuid, targetGuid);
     const bool casted = CallShowSelfPlayer_TryUseSkillOutState12(
         (void *)localPlayerShow, &outState, kRetributionSpellSlotIndex, targetGuid, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     const int64_t nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now().time_since_epoch()).count();
     if (ShouldLogAutoRetriDebug("cast-result-" + std::to_string((unsigned long long)targetGuid), nowMs, 7000)) {
-        LOGI("[Debug][AutoRetri] cast-result status=%s reasonCode=%d targetGuid=0x%016" PRIx64 " (%" PRIu64 ") targetId=%d hp=%d hpMax=%d dist=%.2f inRange=%d spellReady=%d sameCampType=%d castApiTarget=runtimeGuid castApiSpellSlot=%d",
-             casted ? "success" : "fail", outState, targetGuid, eval.targetId, eval.targetHp, eval.targetHpMax,
+        LOGI("[Debug][AutoRetri] cast-result status=%s reasonCode=%d targetGuid=%" PRIu64 " (0x%016" PRIx64 ") targetId=%d hp=%d hpMax=%d dist=%.2f inRange=%d spellReady=%d sameCampType=%d castApiTarget=runtimeGuid castApiSpellSlot=%d",
+             casted ? "success" : "fail", outState, targetGuid, targetGuid, eval.targetId, eval.targetHp, eval.targetHpMax,
              eval.targetDistance, eval.targetInRange, eval.spellReady, eval.sameCampType, kRetributionSpellSlotIndex);
         if (eval.targetInRange && !casted) {
             LOGI("[Debug][AutoRetri] cast-fail-diagnostic reasonCode=%d check-api-target=entityId-vs-worldPosition check-api-spell-slot=current=%d",
