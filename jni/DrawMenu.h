@@ -140,19 +140,6 @@ static inline bool IsInMatch() {
     return bFullChecked;
 }
 
-static inline bool HasRetributionSpell() {
-    if (!IsInMatch()) return false;
-    void *battleManagerInstance = nullptr;
-    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
-    if (!battleManagerInstance) return false;
-
-    auto localPlayerShow = *(uintptr_t *) ((uintptr_t)battleManagerInstance + BattleManager_m_LocalPlayerShow());
-    if (!localPlayerShow) return false;
-
-    int summonSkillId = *(int *) ((uintptr_t)localPlayerShow + ShowPlayer_m_iSummonSkillId());
-    return summonSkillId == 20020;
-}
-
 inline ImColor main_color(230, 134, 224, 255);
 
 inline ImColor text_color[3] = {ImColor(255, 255, 255, 255), ImColor(200, 200, 200, 255), ImColor(150, 150, 150, 255) };
@@ -270,6 +257,8 @@ void Trinage_background()
 int selectedOption = 0;
 std::string cimodkey = "https://t0pgamemurah.xyz/freeKey";
 std::string xyzBuyKey = "https://t0pgamemurah.xyz/freeKey";
+bool g_EnableAIControl = false;
+std::string g_AiControlStatus = "AI control is idle.";
 
 void DrawMenu() {
 	const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
@@ -478,39 +467,35 @@ void DrawMenu() {
                 ImGui::EndTabItem();
             }
 			}
+            if (ImGui::BeginTabItem("AI")) {
+                ImGui::BeginGroupPanel("AI Control", ImVec2(-1.0f, 0.0f));
+                {
+                    ImGui::Checkbox("Enable AI Control", &g_EnableAIControl);
+                    ImGui::TextWrapped("Klik Apply untuk paksa AI control aktif sekarang.");
 
-            if (ImGui::BeginTabItem("Menu Auto")) {
-                ImGui::TextUnformatted("Feature will appear when you are in the match.");
-                if (IsInMatch() && HasRetributionSpell()) {
-                    ImGui::Spacing();
-                    ImGui::SeparatorText("Retribution Menu");
-                    ImGui::Checkbox("Enable Auto Retribution", &Config.auto_menu.enable_retribution);
-                    ImGui::Checkbox("Auto Retribution Fiend", &Config.auto_menu.retri_fiend);
-                    ImGui::Checkbox("Auto Retribution Serpent", &Config.auto_menu.retri_serpent);
-                    ImGui::Checkbox("Auto Retribution Turtle", &Config.auto_menu.retri_turtle);
-                    ImGui::Checkbox("Auto Retribution Lord", &Config.auto_menu.retri_lord);
-                    if (Config.auto_menu.enable_retribution) {
-                        void *battleManagerInstance = nullptr;
-                        Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
-                        uintptr_t localPlayerShow = 0;
-                        if (battleManagerInstance) {
-                            auto battleManager = (uintptr_t)battleManagerInstance;
-                            localPlayerShow = *(uintptr_t *)(battleManager + BattleManager_m_LocalPlayerShow());
-                        }
-                        if (localPlayerShow) {
-                            RuntimeBattleSpellInfo spellInfo = GetRuntimeBattleSpellInfo(localPlayerShow);
-                            if (!IsRetriPayloadReady(spellInfo)) {
-                                ImGui::TextDisabled("Auto Retri: Waiting manual payload calibration");
-                            }
-                        } else {
-                            ImGui::TextDisabled("Auto Retri: Waiting manual payload calibration");
-                        }
+                    if (ImGui::Button("Apply AI Control", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
+                        int playerUid = 0;
+                        uintptr_t uidOffset = SystemData_m_uiID();
+                        if (uidOffset) playerUid = *(int *)(uidOffset);
+
+                        int heroId = 0;
+                        uintptr_t heroOffset = RoomData_uiHeroIDChoose();
+                        if (heroOffset) heroId = *(int *)(heroOffset);
+
+                        uint32_t targetUid = g_EnableAIControl ? static_cast<uint32_t>(playerUid) : 0u;
+                        uint32_t askEndTime = g_EnableAIControl ? static_cast<uint32_t>(time(nullptr) + 120) : 0u;
+                        QueuePlayerAIControl(g_EnableAIControl, heroId, targetUid, false, askEndTime);
+                        g_AiControlStatus = "AI control request queued.";
                     }
+
+                    ImGui::Spacing();
+                    ImGui::TextWrapped("%s", g_AiControlStatus.c_str());
                 }
+                ImGui::EndGroupPanel();
                 ImGui::EndTabItem();
             }
-			
-			static int SelectInfo = 0;
+
+				static int SelectInfo = 0;
             static ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV;
             if (ImGui::BeginTabItem("Setting")) {
                 ImGui::BeginGroupPanel("Menu Setting", ImVec2(-1.0f, 0.0f));

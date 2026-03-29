@@ -38,7 +38,6 @@ int8_t android_app_read_cmd(struct android_app* android_app) {
         }
         return cmd;
     } else {
-        LOGE("No data on command pipe!");
     }
     return -1;
 }
@@ -178,7 +177,6 @@ static void process_input(struct android_app* app, struct android_poll_source* s
         if (app->onInputEvent != NULL) handled = app->onInputEvent(app, event);
         AInputQueue_finishEvent(app->inputQueue, event, handled);
     } else {
-        LOGE("Failure reading next input event: %s\n", strerror(errno));
     }
 }
 
@@ -241,7 +239,6 @@ static struct android_app* android_app_create(ANativeActivity* activity,
 
     int msgpipe[2];
     if (pipe(msgpipe)) {
-        LOGE("could not create pipe: %s", strerror(errno));
         return NULL;
     }
     android_app->msgread = msgpipe[0];
@@ -264,7 +261,6 @@ static struct android_app* android_app_create(ANativeActivity* activity,
 
 static void android_app_write_cmd(struct android_app* android_app, int8_t cmd) {
     if (write(android_app->msgwrite, &cmd, sizeof(cmd)) != sizeof(cmd)) {
-        LOGE("Failure writing android_app cmd: %s\n", strerror(errno));
     }
 }
 
