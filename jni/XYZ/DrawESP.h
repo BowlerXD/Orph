@@ -611,26 +611,12 @@ static inline void DrawObjectiveAlertCard(ImDrawList *draw, int objectiveId, int
     );
     ImVec2 cardBottomRight(cardTopLeft.x + cardSize.x, cardTopLeft.y + cardSize.y);
 
-    // Bubble-style panel: rounded main body + pointer tail to minimap zoom area.
+    // Bubble-style panel: rounded main body.
     const float cardRounding = std::clamp(cardSize.y * 0.12f, 6.0f, 12.0f);
     const ImU32 bubbleFill = IM_COL32(16, 20, 28, 210);
     const ImU32 bubbleBorder = IM_COL32(0, 0, 0, 210);
     draw->AddRectFilled(cardTopLeft, cardBottomRight, bubbleFill, cardRounding);
     draw->AddRect(cardTopLeft, cardBottomRight, bubbleBorder, cardRounding, 0, 1.4f);
-
-    // Large clean triangle tail; tip points to zoom icon at right side of minimap.
-    const float minimapZoomTargetX = minimapWidth - std::clamp(minimapWidth * 0.02f, 4.0f, 10.0f);
-    const float minimapZoomTargetY = minimapPosY + minimapHeight * 0.50f;
-    const float tailHalfHeight = std::clamp(cardSize.y * 0.20f, 12.0f, 24.0f);
-    const float tailCenterY = std::clamp(minimapZoomTargetY, cardTopLeft.y + cardRounding + tailHalfHeight, cardBottomRight.y - cardRounding - tailHalfHeight);
-    const float tailBaseX = cardTopLeft.x + 2.0f;
-    ImVec2 tailPoly[3] = {
-        ImVec2(tailBaseX, tailCenterY - tailHalfHeight),
-        ImVec2(tailBaseX, tailCenterY + tailHalfHeight),
-        ImVec2(minimapZoomTargetX, minimapZoomTargetY)
-    };
-    draw->AddConvexPolyFilled(tailPoly, 3, bubbleFill);
-    draw->AddPolyline(tailPoly, 3, bubbleBorder, ImDrawFlags_Closed, 1.6f);
 
     // Alert image (use raw icon color; no gradient tint so base64 image is not distorted).
     Icon alertIcon = MonsterAlertTexture(objectiveId);
