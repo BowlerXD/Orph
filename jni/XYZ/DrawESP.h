@@ -602,8 +602,13 @@ static inline void DrawObjectiveAlertCard(ImDrawList *draw, int objectiveId, int
     // includes an internal offset. Use minimapWidth as visual right edge reference.
     const float zoomAnchorX = minimapWidth + std::clamp(minimapWidth * 0.05f, 10.0f, 20.0f);
     const float zoomAnchorY = minimapPosY + minimapHeight * 0.50f;
-    // Stick card to the right edge of minimap (no visual horizontal gap).
-    ImVec2 cardTopLeft(minimapWidth - 2.0f, zoomAnchorY - cardSize.y - std::clamp(cardSize.y * 0.14f, 10.0f, 18.0f));
+    // Nudge card diagonally to lower-left so it hugs minimap edge closer.
+    const float cardNudgeLeft = std::clamp(cardSize.x * 0.08f, 16.0f, 30.0f);
+    const float cardNudgeDown = std::clamp(cardSize.y * 0.18f, 10.0f, 20.0f);
+    ImVec2 cardTopLeft(
+        minimapWidth - 2.0f - cardNudgeLeft,
+        zoomAnchorY - cardSize.y - std::clamp(cardSize.y * 0.14f, 10.0f, 18.0f) + cardNudgeDown
+    );
     ImVec2 cardBottomRight(cardTopLeft.x + cardSize.x, cardTopLeft.y + cardSize.y);
 
     // Bubble-style panel: rounded main body + pointer tail to minimap zoom area.
