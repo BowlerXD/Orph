@@ -775,7 +775,8 @@ static inline bool TryCastRetribution(uintptr_t battleManager, uintptr_t localPl
         return false;
     }
     const bool hasManualP1 = g_ManualRetriSnapshotCaptured;
-    if (!hasManualP1 && (!spellInfo.retriCommandCodeResolved || spellInfo.retriCommandCode <= 0)) {
+    const bool hasManualCachedP1 = g_CachedRetriP1Valid;
+    if (!hasManualP1 && !hasManualCachedP1 && (!spellInfo.retriCommandCodeResolved || spellInfo.retriCommandCode <= 0)) {
         LogCommandCodeUnresolvedOncePerMatch(battleManager, spellInfo.spellId, spellInfo.spellSlot, "cast-blocked");
         return false;
     }
@@ -836,6 +837,20 @@ static inline bool TryCastRetribution(uintptr_t battleManager, uintptr_t localPl
         }
         LOGI("[Debug][AutoRetri] cast-args source=manual-template p1(manual)=%d p2=%" PRIu64 " (0x%016" PRIx64 ") templateP2=%" PRIu64 " p3=%d p4=%d p5=%d p7=%d p8=%d p10=%d p11=%d",
              autoArgs.p1, autoArgs.p2, autoArgs.p2, g_ManualRetriSnapshotArgs.p2,
+             autoArgs.p3, autoArgs.p4, autoArgs.p5,
+             autoArgs.p7, autoArgs.p8, autoArgs.p10, autoArgs.p11);
+    } else if (hasManualCachedP1) {
+        castModeResolved.mode = TryUseSkillResolvedMode::NonEntityNoPosition;
+        castModeResolved.isEntityTarget = false;
+        castModeResolved.needsWorldPosition = false;
+        autoArgs = {
+            g_CachedRetriP1, 0,
+            0, 0, 0, 0,
+            g_CachedRetriP7, g_CachedRetriP8, 0, g_CachedRetriP10, g_CachedRetriP11
+        };
+        LOGI("[Debug][AutoRetri] auto-p1-source=manual-cache auto-p1=%d", autoArgs.p1);
+        LOGI("[Debug][AutoRetri] cast-args source=manual-cache p1=%d p2=%" PRIu64 " (0x%016" PRIx64 ") p3=%d p4=%d p5=%d p7=%d p8=%d p10=%d p11=%d",
+             autoArgs.p1, autoArgs.p2, autoArgs.p2,
              autoArgs.p3, autoArgs.p4, autoArgs.p5,
              autoArgs.p7, autoArgs.p8, autoArgs.p10, autoArgs.p11);
     } else {
@@ -902,8 +917,20 @@ static inline void UpdateAutoRetribution() {
         return;
     }
 
+    static uintptr_t s_lastBattleManagerTracked = 0;
+    static int s_lastSelfGuidTracked = 0;
+    static int s_lastSpellIdTracked = -1;
+
     if (!Config.auto_menu.enable_retribution) return;
-    if (!AutoRetriIsInMatch()) return;
+    if (!AutoRetriIsInMatch()) {
+        if (s_lastBattleManagerTracked != 0 || s_lastSelfGuidTracked != 0 || s_lastSpellIdTracked != -1) {
+            ResetManualRetriCache("match-changed/out-of-match");
+            s_lastBattleManagerTracked = 0;
+            s_lastSelfGuidTracked = 0;
+            s_lastSpellIdTracked = -1;
+        }
+        return;
+    }
 
     void *battleManagerInstance = nullptr;
     Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
@@ -914,6 +941,15 @@ static inline void UpdateAutoRetribution() {
     if (!m_LocalPlayerShow) return;
 
     const int selfGuid = *(int *) (m_LocalPlayerShow + EntityBase_m_uGuid());
+    if (s_lastBattleManagerTracked != 0 && s_lastBattleManagerTracked != battleManager) {
+        ResetManualRetriCache("match-changed/battle-manager");
+    }
+    if (s_lastSelfGuidTracked != 0 && s_lastSelfGuidTracked != selfGuid) {
+        ResetManualRetriCache("hero-changed/self-guid");
+    }
+    s_lastBattleManagerTracked = battleManager;
+    s_lastSelfGuidTracked = selfGuid;
+
     auto coolDownData = getPlayerCoolDown(selfGuid, m_LocalPlayerShow);
     if (s_waitingCooldownActivation) {
         if (coolDownData.spell > 0) {
@@ -938,10 +974,14 @@ static inline void UpdateAutoRetribution() {
     }
 
     RuntimeBattleSpellInfo activeSpellInfo = GetRuntimeBattleSpellInfo(m_LocalPlayerShow);
+    if (s_lastSpellIdTracked != -1 && s_lastSpellIdTracked != activeSpellInfo.spellId) {
+        ResetManualRetriCache("battle-spell-changed");
+    }
+    s_lastSpellIdTracked = activeSpellInfo.spellId;
     if (activeSpellInfo.spellId != 20020) {
         return;
     }
-    if (!g_ManualRetriSnapshotCaptured &&
+    if (!g_ManualRetriSnapshotCaptured && !g_CachedRetriP1Valid &&
         (!activeSpellInfo.retriCommandCodeResolved || activeSpellInfo.retriCommandCode <= 0)) {
         LogCommandCodeUnresolvedOncePerMatch(battleManager, activeSpellInfo.spellId, activeSpellInfo.spellSlot, "auto-blocked");
         return;

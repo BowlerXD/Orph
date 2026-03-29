@@ -304,6 +304,27 @@ inline ShowSelfPlayerTryUseSkillOutState12Fn g_ShowSelfPlayerTryUseSkillOutState
 inline bool g_AutoRetriTryUseSkillCallScope = false;
 inline bool g_ManualRetriSnapshotCaptured = false;
 inline TryUseSkillOutState12Args g_ManualRetriSnapshotArgs = {0};
+inline bool g_CachedRetriP1Valid = false;
+inline int g_CachedRetriP1 = 0;
+inline int g_CachedRetriP7 = 0;
+inline int g_CachedRetriP8 = 0;
+inline int g_CachedRetriP10 = 0;
+inline int g_CachedRetriP11 = 0;
+
+inline void ResetManualRetriCache(const char *reason) {
+    const bool hadManualSnapshot = g_ManualRetriSnapshotCaptured;
+    const bool hadCachedP1 = g_CachedRetriP1Valid;
+    g_ManualRetriSnapshotCaptured = false;
+    g_ManualRetriSnapshotArgs = {0};
+    g_CachedRetriP1Valid = false;
+    g_CachedRetriP1 = 0;
+    g_CachedRetriP7 = 0;
+    g_CachedRetriP8 = 0;
+    g_CachedRetriP10 = 0;
+    g_CachedRetriP11 = 0;
+    LOGI("[TryUseSkill][manual-cache-reset] reason=%s hadManualSnapshot=%d hadCachedP1=%d",
+         reason ? reason : "unknown", hadManualSnapshot, hadCachedP1);
+}
 
 inline const char *TryUseSkillTargetModeLabel(const TryUseSkillOutState12Args &args) {
     return TryUseSkillResolvedModeLabel(ResolveTryUseSkillModeFromArgs(args).mode);
@@ -361,6 +382,20 @@ inline bool hShowSelfPlayer_TryUseSkillOutState12(
         g_ManualRetriSnapshotCaptured = true;
         g_ManualRetriSnapshotArgs = currentArgs;
         LogTryUseSkillArgs("manual-snapshot", g_ManualRetriSnapshotArgs);
+    }
+
+    if (!fromAutoRetri) {
+        const bool isManualRetriNonEntityPattern = (currentArgs.p11 == 3 && currentArgs.p2 == 0);
+        if (isManualRetriNonEntityPattern) {
+            g_CachedRetriP1Valid = true;
+            g_CachedRetriP1 = currentArgs.p1;
+            g_CachedRetriP7 = currentArgs.p7;
+            g_CachedRetriP8 = currentArgs.p8;
+            g_CachedRetriP10 = currentArgs.p10;
+            g_CachedRetriP11 = currentArgs.p11;
+            LOGI("[TryUseSkill][manual-cache] pattern=retri-non-entity p1=%d p7=%d p8=%d p10=%d p11=%d",
+                 g_CachedRetriP1, g_CachedRetriP7, g_CachedRetriP8, g_CachedRetriP10, g_CachedRetriP11);
+        }
     } else if (fromAutoRetri) {
         LogTryUseSkillArgs("auto-retri", currentArgs);
         if (g_ManualRetriSnapshotCaptured) {
