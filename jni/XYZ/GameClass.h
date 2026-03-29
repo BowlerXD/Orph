@@ -2,6 +2,11 @@
 
 typedef unsigned long dword;
 
+inline bool ShouldLogResolveFail(uint32_t &counter) {
+    ++counter;
+    return counter == 1 || (counter % 300) == 0;
+}
+
 uintptr_t Screen_get_width() {
 	return (uintptr_t) Il2CppGetMethodOffset("UnityEngine.CoreModule.dll", "UnityEngine", "Display", "get_systemWidth");
 }
@@ -39,12 +44,28 @@ class Screen {
 };
 
 uintptr_t Camera_get_main() {
-    return (uintptr_t) Il2CppGetMethodOffset("UnityEngine.CoreModule.dll", "UnityEngine", "Camera", "get_main");
+    static uint32_t failCounter = 0;
+    static uintptr_t method = 0;
+    if (!method) {
+        method = (uintptr_t) Il2CppGetMethodOffset("UnityEngine.CoreModule.dll", "UnityEngine", "Camera", "get_main");
+        if (!method && ShouldLogResolveFail(failCounter)) {
+            LOGW("[OffsetCache] failed method resolve UnityEngine.CoreModule.dll::UnityEngine::Camera.get_main (attempt=%u)", failCounter);
+        }
+    }
+    return method;
 }
 
 // Function to replace Camera_WorldToScreenPoint
 uintptr_t Camera_WorldToScreenPoint() {
-    return (uintptr_t) Il2CppGetMethodOffset("UnityEngine.CoreModule.dll", "UnityEngine", "Camera", "WorldToScreenPoint", 1);
+    static uint32_t failCounter = 0;
+    static uintptr_t method = 0;
+    if (!method) {
+        method = (uintptr_t) Il2CppGetMethodOffset("UnityEngine.CoreModule.dll", "UnityEngine", "Camera", "WorldToScreenPoint", 1);
+        if (!method && ShouldLogResolveFail(failCounter)) {
+            LOGW("[OffsetCache] failed method resolve UnityEngine.CoreModule.dll::UnityEngine::Camera.WorldToScreenPoint (attempt=%u)", failCounter);
+        }
+    }
+    return method;
 }
 
 // Function to replace Camera_get_fieldOfView
@@ -59,11 +80,27 @@ uintptr_t Camera_set_fieldOfView() {
 
 //Class Transform
 uintptr_t Transform_get_position(){
-	return (uintptr_t) Il2CppGetMethodOffset("UnityEngine.CoreModule.dll", "UnityEngine", "Transform", "get_position");
+    static uint32_t failCounter = 0;
+    static uintptr_t method = 0;
+    if (!method) {
+        method = (uintptr_t) Il2CppGetMethodOffset("UnityEngine.CoreModule.dll", "UnityEngine", "Transform", "get_position");
+        if (!method && ShouldLogResolveFail(failCounter)) {
+            LOGW("[OffsetCache] failed method resolve UnityEngine.CoreModule.dll::UnityEngine::Transform.get_position (attempt=%u)", failCounter);
+        }
+    }
+	return method;
 }
 
 uintptr_t Transform_get_localPosition(){
-	return (uintptr_t) Il2CppGetMethodOffset("UnityEngine.CoreModule.dll", "UnityEngine", "Transform", "get_localPosition");
+    static uint32_t failCounter = 0;
+    static uintptr_t method = 0;
+    if (!method) {
+        method = (uintptr_t) Il2CppGetMethodOffset("UnityEngine.CoreModule.dll", "UnityEngine", "Transform", "get_localPosition");
+        if (!method && ShouldLogResolveFail(failCounter)) {
+            LOGW("[OffsetCache] failed method resolve UnityEngine.CoreModule.dll::UnityEngine::Transform.get_localPosition (attempt=%u)", failCounter);
+        }
+    }
+	return method;
 }
 
 uintptr_t Transform_set_position(){
@@ -127,7 +164,15 @@ uintptr_t LogicBattleManager_Instan() {
 }
 
 uintptr_t LogicBattleManager_GetPlayerRealSelf(){
-	return (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "LogicBattleManager", "GetPlayerRealSelf");
+    static uint32_t failCounter = 0;
+    static uintptr_t method = 0;
+    if (!method) {
+        method = (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "LogicBattleManager", "GetPlayerRealSelf");
+        if (!method && ShouldLogResolveFail(failCounter)) {
+            LOGW("[OffsetCache] failed method resolve Assembly-CSharp.dll::LogicBattleManager.GetPlayerRealSelf (attempt=%u)", failCounter);
+        }
+    }
+	return method;
 }
 
 uintptr_t LogicBattleManager_mState(){
