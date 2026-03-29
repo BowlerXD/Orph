@@ -239,7 +239,6 @@ void Render()
 
     if (bFullChecked) {
         if (!loggedEspEntry) {
-            LOGI("[Debug][Render] entering NewDrawESP (screen=%dx%d)", (int)screenWidth, (int)screenHeight);
             loggedEspEntry = true;
         }
         NewDrawESP(ImGui::GetBackgroundDrawList(), screenWidth, screenHeight);

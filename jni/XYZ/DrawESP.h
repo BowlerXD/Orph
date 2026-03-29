@@ -204,51 +204,8 @@ double get_m_AttkSpeed(void* thiz){
     return orig_get_m_AttkSpeed(thiz);
 }
 
-static inline void UpdateAutoRetribution();
 
 DefineHook(void, UpdateMapHack, (void * pThis)) {
-    static time_t s_lastDebugLog = 0;
-    static bool s_lastVisualState = false;
-    static bool s_lastMonsterState = false;
-
-    const bool maphackVisualEnabled =
-        Config.Visual.MaphackIcon ||
-        Config.Visual.MapHackIcon2 ||
-        Config.Visual.MapHackIcon3 ||
-        Config.Visual.HealthBar ||
-        Config.Visual.HeadIcon;
-    const bool monsterVisualEnabled =
-        Config.Visual.MonsterIcon ||
-        Config.Visual.MonsterHealth ||
-        Config.Visual.MonsterBody ||
-        Config.Visual.ShowJungle ||
-        Config.Visual.ShowMonsterTest;
-
-    if (maphackVisualEnabled != s_lastVisualState || monsterVisualEnabled != s_lastMonsterState) {
-        LOGI("[Debug][UpdateMapHack] state changed | hero=%d monster=%d", maphackVisualEnabled, monsterVisualEnabled);
-        s_lastVisualState = maphackVisualEnabled;
-        s_lastMonsterState = monsterVisualEnabled;
-    }
-
-    //AimEnemy = GetEnemyPosAimPredict(pThis);
-    int enemyProcessed = 0;
-    int monsterProcessed = 0;
-    bool battleBridgeMissing = false;
-    bool battleManagerMissing = false;
-    int featureMapHackIcon2Calls = 0;
-    int featureMapHackIconCalls = 0;
-    int featureHealthBarCalls = 0;
-    int featureHeadIconCalls = 0;
-    int featureMapHackIcon3Calls = 0;
-    int featureMonsterIconCalls = 0;
-    int soldierCandidates = 0;
-    int soldierIconCalls = 0;
-    int soldierSkippedInvalidGuid = 0;
-    int featureMonsterHealthCalls = 0;
-    int featureMonsterBodyCalls = 0;
-    int featureShowJungleCalls = 0;
-    int featureShowMonsterTestCalls = 0;
-
     if (pThis != NULL) {
         void *BattleBridge_Instance = nullptr, *BattleManager_Instance = nullptr;
         Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleData", "m_BattleBridge", &BattleBridge_Instance);
@@ -273,21 +230,20 @@ DefineHook(void, UpdateMapHack, (void * pThis)) {
                         auto m_uGuid = *(int *) ((uintptr_t)Pawn + EntityBase_m_uGuid());
                         auto _Position = *(Vector3 *) ((uintptr_t)Pawn + ShowEntity__Position());
                         auto *m_HeadIcon = *(String **) ((uintptr_t) Pawn + ShowEntity_m_HeadIcon);
-						auto bShowEntityLayer = *(bool *) ((uintptr_t)Pawn + ShowEntity_bShowEntityLayer);
-                        enemyProcessed++;
-						
 						if (Config.Visual.MapHackIcon2){
 							auto CanSightMapHack = (void (*)(void *, Vector3)) (ShowEntity_CanSight);
-							CanSightMapHack(BattleBridge_Instance, _Position);
-                            featureMapHackIcon2Calls++;
+                            if (CanSightMapHack) {
+							    CanSightMapHack(BattleBridge_Instance, _Position);
+                            }
 						}
 						
                         if (Config.Visual.MaphackIcon) {
                             auto SetMapEntityIconPos = (void (*)(void *, Vector3, int, bool)) (BattleBridge_SetMapEntityIconPos);
                             //auto SetMapInvisibility = (void (*)(void *, bool, bool, bool)) (BattleBridge_SetMapInvisibility);                            
                             //SetMapInvisibility(BattleBridge_Instance, bShowEntityLayer, true, m_bDeath);
-                            SetMapEntityIconPos(BattleBridge_Instance, _Position,m_uGuid, true);
-                            featureMapHackIconCalls++;
+                            if (SetMapEntityIconPos) {
+                                SetMapEntityIconPos(BattleBridge_Instance, _Position,m_uGuid, true);
+                            }
 							
                         }
                         
@@ -295,25 +251,27 @@ DefineHook(void, UpdateMapHack, (void * pThis)) {
                             auto SetBloodInvisibility = (void (*)(void *, int, bool, bool, bool, int)) (BattleBridge_SetBloodInvisibility);
                             auto SynBloodAttr = (void (*)(void *, void *, bool)) (BattleBridge_SynBloodAttr());
                             auto UpdateBloodPos = (void (*)(void *, void *, bool)) (BattleBridge_UpdateBloodPos());
-                            
-                            SetBloodInvisibility(BattleBridge_Instance, m_uGuid, true, m_bDeath, true, 0);
-                            SynBloodAttr(BattleBridge_Instance, Pawn, true);
-                            UpdateBloodPos(BattleBridge_Instance, Pawn, true);
-                            featureHealthBarCalls++;
+                            if (SetBloodInvisibility && SynBloodAttr && UpdateBloodPos) {
+                                SetBloodInvisibility(BattleBridge_Instance, m_uGuid, true, m_bDeath, true, 0);
+                                SynBloodAttr(BattleBridge_Instance, Pawn, true);
+                                UpdateBloodPos(BattleBridge_Instance, Pawn, true);
+                            }
                         }
                         
                         if (Config.Visual.HeadIcon) {
                             auto BattleBridge__ShowHeadEquip = (void (*)(void *, int, String*)) (BattleBridge_ShowHeadEquip());
-                            BattleBridge__ShowHeadEquip(BattleBridge_Instance, m_uGuid, m_HeadIcon);
-                            featureHeadIconCalls++;
+                            if (BattleBridge__ShowHeadEquip) {
+                                BattleBridge__ShowHeadEquip(BattleBridge_Instance, m_uGuid, m_HeadIcon);
+                            }
                         }
 						
 						if (Config.Visual.MapHackIcon3){
                             auto ResetLayer = (void (*)(void *, bool)) (ShowEntity_ResetLayer);
                             auto EyeLayer = (void (*)(void *, bool, bool, bool)) (ShowEntityUpdateEyeLayer);
-                            ResetLayer(Pawn, true);
-                            EyeLayer(Pawn, true, true, true);
-                            featureMapHackIcon3Calls++;
+                            if (ResetLayer && EyeLayer) {
+                                ResetLayer(Pawn, true);
+                                EyeLayer(Pawn, true, true, true);
+                            }
                         }
                     }
                 }
@@ -322,7 +280,6 @@ DefineHook(void, UpdateMapHack, (void * pThis)) {
                     for (int i = 0; i < m_ShowMonster->getSize(); i++) {
                         auto Pawn = m_ShowMonster->getItems()[i];
                         if (!Pawn) continue;
-                        auto m_ID = *(int *) ((uintptr_t)Pawn + EntityBase_m_ID());
                         bool isSoldier = *(bool *) ((uintptr_t)Pawn + ShowEntity_IsSoldier);
                         bool isTower = *(bool *) ((uintptr_t)Pawn + ShowEntity_IsTower);
                         bool isWildMonster = *(bool *) ((uintptr_t)Pawn + ShowEntity_IsWildMonster);
@@ -337,8 +294,6 @@ DefineHook(void, UpdateMapHack, (void * pThis)) {
                         auto m_uGuid = *(int *) ((uintptr_t)Pawn + EntityBase_m_uGuid());
                         auto _Position = *(Vector3 *) ((uintptr_t)Pawn + ShowEntity__Position());
                         auto *m_HeadIcon = *(String **) ((uintptr_t) Pawn + ShowEntity_m_HeadIcon);
-                        monsterProcessed++;
-                        if (isSoldier) soldierCandidates++;
                         
                         if (Config.Visual.MonsterIcon || (Config.MinimapIcon && isSoldier)) {
                             auto SetMapEntityIconPos = (void (*)(void *, Vector3, int, bool)) (BattleBridge_SetMapEntityIconPos);
@@ -348,10 +303,6 @@ DefineHook(void, UpdateMapHack, (void * pThis)) {
                                     SetMapInvisibility(BattleBridge_Instance, m_uGuid, true, m_bDeath);
                                 }
                                 SetMapEntityIconPos(BattleBridge_Instance, _Position, m_uGuid, true);
-                                featureMonsterIconCalls++;
-                                if (isSoldier) soldierIconCalls++;
-                            } else if (isSoldier) {
-                                soldierSkippedInvalidGuid++;
                             }
                         }
                         
@@ -360,68 +311,41 @@ DefineHook(void, UpdateMapHack, (void * pThis)) {
                             auto SynBloodAttr = (void (*)(void *, void *, bool)) (BattleBridge_SynBloodAttr());
                             auto UpdateBloodPos = (void (*)(void *, void *, bool)) (BattleBridge_UpdateBloodPos());
                             
-                            SetBloodInvisibility(BattleBridge_Instance, m_uGuid, true, m_bDeath, true, 0);
-                            SynBloodAttr(BattleBridge_Instance, Pawn, true);
-                            UpdateBloodPos(BattleBridge_Instance, Pawn, true);
-                            featureMonsterHealthCalls++;
+                            if (SetBloodInvisibility && SynBloodAttr && UpdateBloodPos) {
+                                SetBloodInvisibility(BattleBridge_Instance, m_uGuid, true, m_bDeath, true, 0);
+                                SynBloodAttr(BattleBridge_Instance, Pawn, true);
+                                UpdateBloodPos(BattleBridge_Instance, Pawn, true);
+                            }
                         }
                         
                         if (Config.Visual.MonsterBody) {
                             auto ShowWildMonster__CanSight = (bool (*)(void*, bool)) (ShowEntity_CanSight);
-                            ShowWildMonster__CanSight(Pawn, true);
-                            featureMonsterBodyCalls++;
+                            if (ShowWildMonster__CanSight) {
+                                ShowWildMonster__CanSight(Pawn, true);
+                            }
                         }
                         
                         if (Config.Visual.ShowJungle){
                             auto ResetLayer = (void (*)(void *, bool)) (ShowEntity_ResetLayer);
                             auto EyeLayer = (void (*)(void *, bool, bool, bool)) (ShowEntityUpdateEyeLayer);
-                            ResetLayer(Pawn, true);
-                            EyeLayer(Pawn, true, true, true);
-                            featureShowJungleCalls++;
+                            if (ResetLayer && EyeLayer) {
+                                ResetLayer(Pawn, true);
+                                EyeLayer(Pawn, true, true, true);
+                            }
                         }
                         
                         if (Config.Visual.ShowMonsterTest){
                             auto InitSetEye = (void(*)(void*,bool, bool)) (ShowEntity_InitSetEye);
-                            InitSetEye(Pawn, true, true);
-                            featureShowMonsterTestCalls++;
+                            if (InitSetEye) {
+                                InitSetEye(Pawn, true, true);
+                            }
                         }
                     }
                 }
                 
-            } else {
-                battleManagerMissing = true;
             }
-        } else {
-            battleBridgeMissing = true;
         }
-    } else if (maphackVisualEnabled || monsterVisualEnabled) {
-        LOGW("[Debug][UpdateMapHack] skipped because pThis is null while features are enabled");
     }
-
-    time_t now = time(nullptr);
-    if ((maphackVisualEnabled || monsterVisualEnabled) && (now - s_lastDebugLog >= 5)) {
-        LOGI("[Debug][UpdateMapHack] enemies=%d monsters=%d bridgeMissing=%d managerMissing=%d", enemyProcessed, monsterProcessed, battleBridgeMissing, battleManagerMissing);
-        LOGI("[Debug][FeatureCalls][Hero] mapHackIcon=%d mapHackIcon2=%d mapHackIcon3=%d healthBar=%d headIcon=%d",
-             featureMapHackIconCalls,
-             featureMapHackIcon2Calls,
-             featureMapHackIcon3Calls,
-             featureHealthBarCalls,
-             featureHeadIconCalls);
-        LOGI("[Debug][FeatureCalls][Monster] monsterIcon=%d monsterHealth=%d monsterBody=%d showJungle=%d showMonsterTest=%d",
-             featureMonsterIconCalls,
-             featureMonsterHealthCalls,
-             featureMonsterBodyCalls,
-             featureShowJungleCalls,
-             featureShowMonsterTestCalls);
-        LOGI("[Debug][Minion] candidates=%d iconCalls=%d invalidGuid=%d minimap=%d monsterIcon=%d",
-             soldierCandidates,
-             soldierIconCalls,
-             soldierSkippedInvalidGuid,
-             Config.MinimapIcon,
-             Config.Visual.MonsterIcon);
-        s_lastDebugLog = now;
-    }
-    UpdateAutoRetribution();
     oUpdateMapHack(pThis);
 }
 
@@ -531,477 +455,6 @@ CooldownValues getPlayerCoolDown(int keys, uintptr_t values) {
 
 static inline bool IsExcludedJungleObjective(int jungleTypeId) {
     return jungleTypeId == 2002 || jungleTypeId == 2003 || jungleTypeId == 2110; // lord/turtle
-}
-
-static inline bool AutoRetriIsInMatch() {
-    void *battleBridgeInstance = nullptr, *battleManagerInstance = nullptr;
-    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleData", "m_BattleBridge", &battleBridgeInstance);
-    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
-    return battleBridgeInstance && battleManagerInstance;
-}
-
-struct RuntimeBattleSpellInfo {
-    int spellId = 0;
-    int spellSlot = -1;
-    int retriCommandCode = -1;
-    bool retriCommandCodeResolved = false;
-    bool valid = false;
-};
-
-static inline const char *AutoRetriSpellNameById(int spellId) {
-    switch (spellId) {
-        case 20150: return "Execute";
-        case 20020: return "Retribution";
-        case 20030: return "Inspire";
-        case 20040: return "Sprint";
-        case 20050: return "Revitalize";
-        case 20060: return "Aegis";
-        case 20070: return "Petrify";
-        case 20080: return "Purify";
-        case 20140: return "Flameshot";
-        case 20100: return "Flicker";
-        case 20160: return "Arrival";
-        case 20190: return "Vengeance";
-        default: return nullptr;
-    }
-}
-
-static inline RuntimeBattleSpellInfo GetRuntimeBattleSpellInfo(uintptr_t localPlayerShow) {
-    RuntimeBattleSpellInfo info{};
-    if (!localPlayerShow) return info;
-
-    static const uintptr_t kShowEntityOwnSkillCompOffset = ShowEntity_m_OwnSkillComp;
-    static const uintptr_t kShowOwnSkillCompSkillListOffset = ShowOwnSkillComp_m_SkillList();
-    static const uintptr_t kShowPlayerSummonSkillIdOffset = ShowPlayer_m_iSummonSkillId();
-    static const uintptr_t kShowSkillDataTranIdOffset = ShowSkillData_m_TranID();
-    static const intptr_t kShowSkillDataCommandCodeOffset = (intptr_t)ShowSkillData_CommandCode();
-
-    if (!kShowEntityOwnSkillCompOffset || !kShowOwnSkillCompSkillListOffset ||
-        !kShowPlayerSummonSkillIdOffset || !kShowSkillDataTranIdOffset) {
-        return info;
-    }
-
-    info.spellId = *(int *) (localPlayerShow + kShowPlayerSummonSkillIdOffset);
-    if (info.spellId <= 0) return info;
-
-    auto m_OwnSkillComp = *(uintptr_t *) (localPlayerShow + kShowEntityOwnSkillCompOffset);
-    if (!m_OwnSkillComp) return info;
-
-    auto m_SkillList = *(List<uintptr_t> **) (m_OwnSkillComp + kShowOwnSkillCompSkillListOffset);
-    if (!m_SkillList) return info;
-
-    const int skillCount = m_SkillList->getSize();
-    for (int i = 0; i < skillCount; i++) {
-        auto p_SkillList = m_SkillList->getItems()[i];
-        if (!p_SkillList) continue;
-        const int tranId = *(int *) ((uintptr_t)p_SkillList + kShowSkillDataTranIdOffset);
-        if (tranId != info.spellId) continue;
-        info.spellSlot = i;
-        info.valid = true;
-        if (kShowSkillDataCommandCodeOffset != -1 && kShowSkillDataCommandCodeOffset != 0) {
-            const int runtimeCommandCode = *(int *) ((uintptr_t)p_SkillList + (uintptr_t)kShowSkillDataCommandCodeOffset);
-            if (runtimeCommandCode > 0) {
-                info.retriCommandCode = runtimeCommandCode;
-                info.retriCommandCodeResolved = true;
-            }
-        } else {
-            info.retriCommandCodeResolved = false;
-        }
-        return info;
-    }
-    return info;
-}
-
-static inline void LogCommandCodeUnresolvedOncePerMatch(uintptr_t battleManager, int spellId, int spellSlot, const char *logContext) {
-    static uintptr_t s_lastMatchBattleManager = 0;
-    static bool s_loggedUnresolvedForMatch = false;
-    if (s_lastMatchBattleManager != battleManager) {
-        s_lastMatchBattleManager = battleManager;
-        s_loggedUnresolvedForMatch = false;
-    }
-    if (s_loggedUnresolvedForMatch) return;
-    s_loggedUnresolvedForMatch = true;
-    LOGW("[Debug][AutoRetri] %s reason=command-code-unresolved spellId=%d slot=%d",
-         logContext, spellId, spellSlot);
-}
-
-static inline bool IsSelectedAutoRetriMonster(int monsterId) {
-    if (monsterId == 2004) return Config.auto_menu.retri_fiend;
-    if (monsterId == 2005) return Config.auto_menu.retri_serpent;
-    if (monsterId == 2003) return Config.auto_menu.retri_turtle;
-    if (monsterId == 2002) return Config.auto_menu.retri_lord;
-    return false;
-}
-
-static inline bool IsRetriTargetAllowed(int monsterId, bool sameCampType) {
-    // Auto retri must be independent from visual enemy-only filters:
-    // sameCampType remains accepted as long as the objective is enabled in menu.
-    (void)sameCampType;
-    return IsSelectedAutoRetriMonster(monsterId);
-}
-
-static inline int GetRetributionDamageCurrentLevel(uintptr_t localPlayerShow) {
-    if (!localPlayerShow) return 0;
-    int level = *(int *) ((uintptr_t)localPlayerShow + EntityBase_m_Level());
-    if (level < 1) level = 1;
-    return 520 + ((level - 1) * 80);
-}
-
-static inline bool IsRetributionSpellReady(int selfGuid, uintptr_t localPlayerShow) {
-    auto coolDownData = getPlayerCoolDown(selfGuid, localPlayerShow);
-    return coolDownData.spell <= 0;
-}
-
-static inline bool IsRetriPayloadReady(const RuntimeBattleSpellInfo &spellInfo) {
-    const bool hasManualPayload = g_ManualRetriSnapshotCaptured || g_CachedRetriP1Valid;
-    const bool hasResolvedPayload = spellInfo.retriCommandCodeResolved && spellInfo.retriCommandCode > 0;
-    return hasManualPayload || hasResolvedPayload;
-}
-
-struct RetriTargetEvalResult {
-    bool found = false;
-    uint64_t targetGuid = 0;
-    uintptr_t targetEntityPtr = 0;
-    int targetId = 0;
-    int targetHp = 0;
-    int targetHpMax = 0;
-    Vector3 targetWorldPosition{};
-    float targetDistance = 0.0f;
-    bool targetInRange = false;
-    bool spellReady = false;
-    bool sameCampType = false;
-};
-
-static inline float ComputeRetributionCastDistance(const Vector3 &selfPos, const Vector3 &targetPos) {
-    // Keep this aligned with skill-cast world-space range checks (XZ plane), not minimap/screen distance.
-    const float dx = selfPos.x - targetPos.x;
-    const float dz = selfPos.z - targetPos.z;
-    return std::sqrt((dx * dx) + (dz * dz));
-}
-
-static inline bool ShouldLogAutoRetriDebug(const std::string &key, int64_t nowMs, int64_t cooldownMs = 5000) {
-    static std::unordered_map<std::string, int64_t> s_lastLogTickByKey;
-    auto it = s_lastLogTickByKey.find(key);
-    if (it != s_lastLogTickByKey.end() && (nowMs - it->second) < cooldownMs) {
-        return false;
-    }
-    s_lastLogTickByKey[key] = nowMs;
-    return true;
-}
-
-static inline RetriTargetEvalResult EvaluateRetriTarget(uintptr_t battleManager, uintptr_t localPlayerShow) {
-    RetriTargetEvalResult result{};
-    if (!battleManager || !localPlayerShow) return result;
-
-    auto m_dicMonsterShow = *(Dictionary<int, uintptr_t> **) (battleManager + BattleManager_m_dicMonsterShow());
-    if (!m_dicMonsterShow) return result;
-
-    auto selfPos = *(Vector3 *) (localPlayerShow + ShowEntity__Position());
-    const int retriDamageCurrentLevel = GetRetributionDamageCurrentLevel(localPlayerShow);
-    const int selfGuid = *(int *) (localPlayerShow + EntityBase_m_uGuid());
-    const bool spellReady = IsRetributionSpellReady(selfGuid, localPlayerShow);
-    constexpr float kRetributionRange = 6.0f;
-    const int64_t nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count();
-
-    for (int i = 0; i < m_dicMonsterShow->getNumKeys(); i++) {
-        auto values = m_dicMonsterShow->getValues()[i];
-        if (!values) continue;
-
-        auto m_bDeath = *(bool *) ((uintptr_t)values + EntityBase_m_bDeath());
-        if (m_bDeath) continue;
-
-        auto m_ID = *(int *) ((uintptr_t)values + EntityBase_m_ID());
-        auto new_mID = *(int *) ((uintptr_t)values + ShowEntity_m_id());
-        bool isWildMonster = *(bool *) ((uintptr_t)values + ShowEntity_IsWildMonster);
-        int jungleTypeId = bMonster(new_mID) ? new_mID : m_ID;
-        bool isJungleMonster = isWildMonster && bMonster(jungleTypeId);
-        const bool sameCampType = *(bool *) ((uintptr_t)values + EntityBase_m_bSameCampType());
-        if (!isJungleMonster) continue;
-        if (!IsRetriTargetAllowed(jungleTypeId, sameCampType)) continue;
-
-        auto m_Hp = *(int *) ((uintptr_t)values + EntityBase_m_Hp());
-        auto m_HpMax = *(int *) ((uintptr_t)values + EntityBase_m_HpMax());
-        auto _Position = *(Vector3 *) ((uintptr_t)values + ShowEntity__Position());
-        bool hpValid = m_Hp > 0;
-        bool posValid = _Position.x != 0.0f || _Position.y != 0.0f || _Position.z != 0.0f;
-        if (!hpValid || !posValid) continue;
-
-        float targetDistance = ComputeRetributionCastDistance(selfPos, _Position);
-        bool inRange = targetDistance <= kRetributionRange;
-        bool lethal = m_Hp <= retriDamageCurrentLevel;
-        if (lethal && ShouldLogAutoRetriDebug("pre-cast-state-" + std::to_string(jungleTypeId), nowMs, 7000)) {
-            LOGI("[Debug][AutoRetri] pre-cast monsterId=%d hp=%d hpMax=%d retriDamage=%d distance=%.2f inRange=%d spellReady=%d sameCampType=%d",
-                 jungleTypeId, m_Hp, m_HpMax, retriDamageCurrentLevel, targetDistance, inRange, spellReady, sameCampType);
-        }
-        if (!inRange || !lethal || !spellReady) continue;
-
-        const uint64_t targetGuid = *(uint64_t *) ((uintptr_t)values + EntityBase_m_uGuid());
-        if (!targetGuid) continue;
-
-        if (ShouldLogAutoRetriDebug("candidate-guid-" + std::to_string((unsigned long long)targetGuid), nowMs, 3500)) {
-            LOGI("[Debug][AutoRetri] pre-cast-target monsterTypeId=%d runtimeTargetGuid=%" PRIu64 " (0x%016" PRIx64 ") entityPtr=%p",
-                 jungleTypeId, targetGuid, targetGuid, (void *)values);
-        }
-
-        result.found = true;
-        result.targetGuid = targetGuid;
-        result.targetEntityPtr = (uintptr_t)values;
-        result.targetId = jungleTypeId;
-        result.targetHp = m_Hp;
-        result.targetHpMax = m_HpMax;
-        result.targetWorldPosition = _Position;
-        result.targetDistance = targetDistance;
-        result.targetInRange = inRange;
-        result.spellReady = spellReady;
-        result.sameCampType = sameCampType;
-        return result;
-    }
-
-    return result;
-}
-
-static inline bool TryCastRetribution(uintptr_t battleManager, uintptr_t localPlayerShow, uint64_t targetGuid) {
-    void *battleBridgeInstance = nullptr, *battleManagerInstance = nullptr;
-    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleData", "m_BattleBridge", &battleBridgeInstance);
-    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
-    if (!battleBridgeInstance || !battleManagerInstance || !battleManager || !localPlayerShow || !targetGuid) {
-        LOGI("[Debug][AutoRetri] cast-skip reason=invalid-context");
-        return false;
-    }
-
-    RuntimeBattleSpellInfo spellInfo = GetRuntimeBattleSpellInfo(localPlayerShow);
-    if (spellInfo.spellId != 20020) {
-        LOGI("[Debug][AutoRetri] cast-skip reason=active-spell-not-retribution spellId=%d slot=%d",
-             spellInfo.spellId, spellInfo.spellSlot);
-        return false;
-    }
-    if (!spellInfo.valid || spellInfo.spellSlot < 0) {
-        LOGI("[Debug][AutoRetri] cast-skip reason=spell-slot-not-found spellId=%d", spellInfo.spellId);
-        return false;
-    }
-    const bool hasManualP1 = g_ManualRetriSnapshotCaptured;
-    const bool hasManualCachedP1 = g_CachedRetriP1Valid;
-    if (!hasManualP1 && !hasManualCachedP1 && (!spellInfo.retriCommandCodeResolved || spellInfo.retriCommandCode <= 0)) {
-        LogCommandCodeUnresolvedOncePerMatch(battleManager, spellInfo.spellId, spellInfo.spellSlot, "cast-blocked");
-        return false;
-    }
-
-    const bool localPlayerDead = *(bool *) (localPlayerShow + EntityBase_m_bDeath());
-    const bool localPlayerDisabled = get_InTransformation((void *)localPlayerShow);
-    if (localPlayerDead || localPlayerDisabled) {
-        LOGI("[Debug][AutoRetri] cast-skip reason=player-unavailable dead=%d disabled=%d", localPlayerDead, localPlayerDisabled);
-        return false;
-    }
-
-    const int selfGuid = *(int *) (localPlayerShow + EntityBase_m_uGuid());
-    if (!IsRetributionSpellReady(selfGuid, localPlayerShow)) {
-        LOGI("[Debug][AutoRetri] cast-skip reason=spell-cooldown");
-        return false;
-    }
-
-    RetriTargetEvalResult eval = EvaluateRetriTarget(battleManager, localPlayerShow);
-    if (!eval.found || eval.targetGuid != targetGuid) {
-        LOGI("[Debug][AutoRetri] cast-skip reason=target-invalid targetGuid=%" PRIu64 " (0x%016" PRIx64 ")", targetGuid, targetGuid);
-        return false;
-    }
-
-    static uint64_t s_lastCastTargetGuid = 0;
-    static uintptr_t s_lastCastEntityPtr = 0;
-    const uintptr_t currentEntityPtr = eval.targetEntityPtr;
-    if (s_lastCastTargetGuid != 0 && s_lastCastTargetGuid == targetGuid) {
-        LOGI("[Debug][AutoRetri] target-guid-stability stable=1 runtimeTargetGuid=%" PRIu64 " (0x%016" PRIx64 ") prevMarker=%p currMarker=%p",
-             targetGuid, targetGuid, (void *)s_lastCastEntityPtr, (void *)currentEntityPtr);
-    } else if (s_lastCastTargetGuid != 0 && s_lastCastTargetGuid != targetGuid) {
-        LOGI("[Debug][AutoRetri] target-guid-stability stable=0 prevGuid=%" PRIu64 " (0x%016" PRIx64 ") currGuid=%" PRIu64 " (0x%016" PRIx64 ")",
-             s_lastCastTargetGuid, s_lastCastTargetGuid, targetGuid, targetGuid);
-    }
-
-    int outState = 0;
-    TryUseSkillOutState12Args autoArgs{};
-    TryUseSkillResolvedModeInfo castModeResolved{};
-
-    if (hasManualP1) {
-        LOGI("[Debug][AutoRetri] manual-validation status=use-manual-p1 manualP1=%d",
-             g_ManualRetriSnapshotArgs.p1);
-        // Manual retri trace is the source of truth.
-        // Keep encoded signature payload from the manual call, then patch only dynamic runtime fields.
-        autoArgs = g_ManualRetriSnapshotArgs;
-        castModeResolved = ResolveTryUseSkillModeFromArgs(g_ManualRetriSnapshotArgs);
-        if (castModeResolved.isEntityTarget) {
-            // Entity-target mode -> patch runtime target guid.
-            autoArgs.p2 = targetGuid;
-        } else {
-            // Non-entity-target mode -> do not send runtime target guid.
-            autoArgs.p2 = 0;
-            if (castModeResolved.needsWorldPosition) {
-                // Non-entity mode that needs position -> use world-position target as cast input.
-                autoArgs.p3 = (int)std::lround(eval.targetWorldPosition.x * 1000.0f);
-                autoArgs.p4 = (int)std::lround(eval.targetWorldPosition.y * 1000.0f);
-                autoArgs.p5 = (int)std::lround(eval.targetWorldPosition.z * 1000.0f);
-            }
-        }
-        LOGI("[Debug][AutoRetri] cast-args source=manual-template p1(manual)=%d p2=%" PRIu64 " (0x%016" PRIx64 ") templateP2=%" PRIu64 " p3=%d p4=%d p5=%d p7=%d p8=%d p10=%d p11=%d",
-             autoArgs.p1, autoArgs.p2, autoArgs.p2, g_ManualRetriSnapshotArgs.p2,
-             autoArgs.p3, autoArgs.p4, autoArgs.p5,
-             autoArgs.p7, autoArgs.p8, autoArgs.p10, autoArgs.p11);
-    } else if (hasManualCachedP1) {
-        castModeResolved.mode = TryUseSkillResolvedMode::NonEntityNoPosition;
-        castModeResolved.isEntityTarget = false;
-        castModeResolved.needsWorldPosition = false;
-        autoArgs = {
-            g_CachedRetriP1, 0,
-            0, 0, 0, 0,
-            g_CachedRetriP7, g_CachedRetriP8, 0, g_CachedRetriP10, g_CachedRetriP11
-        };
-        LOGI("[Debug][AutoRetri] auto-p1-source=manual-cache auto-p1=%d", autoArgs.p1);
-        LOGI("[Debug][AutoRetri] cast-args source=manual-cache p1=%d p2=%" PRIu64 " (0x%016" PRIx64 ") p3=%d p4=%d p5=%d p7=%d p8=%d p10=%d p11=%d",
-             autoArgs.p1, autoArgs.p2, autoArgs.p2,
-             autoArgs.p3, autoArgs.p4, autoArgs.p5,
-             autoArgs.p7, autoArgs.p8, autoArgs.p10, autoArgs.p11);
-    } else {
-        castModeResolved.mode = TryUseSkillResolvedMode::EntityTarget;
-        castModeResolved.isEntityTarget = true;
-        autoArgs = {
-            spellInfo.retriCommandCode, targetGuid,
-            0, 0, 0, 0, 0, 0, 0, 0, 0
-        };
-        LOGI("[Debug][AutoRetri] cast-args source=fallback-default retriCommandCode=%d runtimeTargetGuid=%" PRIu64 " (0x%016" PRIx64 ") paramOrder=[p1..p11]",
-             autoArgs.p1, autoArgs.p2, autoArgs.p2);
-    }
-    LOGI("[Debug][AutoRetri] castModeResolved mode=%s isEntityTarget=%d needsWorldPosition=%d runtimeTargetGuid=%" PRIu64 " worldPos=(%.3f,%.3f,%.3f)",
-         TryUseSkillResolvedModeLabel(castModeResolved.mode),
-         castModeResolved.isEntityTarget,
-         castModeResolved.needsWorldPosition,
-         targetGuid,
-         eval.targetWorldPosition.x, eval.targetWorldPosition.y, eval.targetWorldPosition.z);
-
-    const bool casted = CallShowSelfPlayer_TryUseSkillOutState12_AutoRetri(
-        (void *)localPlayerShow, &outState,
-        autoArgs.p1, autoArgs.p2, autoArgs.p3, autoArgs.p4, autoArgs.p5, autoArgs.p6,
-        autoArgs.p7, autoArgs.p8, autoArgs.p9, autoArgs.p10, autoArgs.p11);
-    const int64_t nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count();
-    if (ShouldLogAutoRetriDebug("cast-result-" + std::to_string((unsigned long long)targetGuid), nowMs, 7000)) {
-        LOGI("[Debug][AutoRetri] cast-result status=%s reasonCode=%d targetGuid=%" PRIu64 " (0x%016" PRIx64 ") targetId=%d hp=%d hpMax=%d dist=%.2f inRange=%d spellReady=%d sameCampType=%d castApiTarget=runtimeGuid castApiSpellSlot=%d",
-             casted ? "success" : "fail", outState, targetGuid, targetGuid, eval.targetId, eval.targetHp, eval.targetHpMax,
-             eval.targetDistance, eval.targetInRange, eval.spellReady, eval.sameCampType, spellInfo.spellSlot);
-        if (eval.targetInRange && !casted) {
-            LOGI("[Debug][AutoRetri] cast-fail-diagnostic reasonCode=%d check-api-target=entityId-vs-worldPosition check-api-spell-slot=current=%d",
-                 outState, spellInfo.spellSlot);
-        }
-    }
-    s_lastCastTargetGuid = targetGuid;
-    s_lastCastEntityPtr = currentEntityPtr;
-    return casted;
-}
-
-static inline void UpdateAutoRetribution() {
-    static int64_t s_lastAttemptTickMs = 0;
-    static constexpr int64_t kAttemptDebounceMs = 220;
-    static int s_pendingCastWindowFrame = -1;
-    static bool s_waitingCooldownActivation = false;
-
-    const int64_t nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count();
-
-    auto logAttemptBlockedByDebounce = [&](const char *reason) {
-        if (ShouldLogAutoRetriDebug(std::string("attemptBlockedByDebounce-") + reason, nowMs, 350)) {
-            LOGI("[Debug][AutoRetri] attemptBlockedByDebounce reason=%s sinceLastAttemptMs=%" PRId64 " pendingCastWindowFrame=%d waitingCooldownActivation=%d",
-                 reason, nowMs - s_lastAttemptTickMs, s_pendingCastWindowFrame, s_waitingCooldownActivation);
-        }
-    };
-
-    if ((nowMs - s_lastAttemptTickMs) < kAttemptDebounceMs) {
-        logAttemptBlockedByDebounce("time-debounce");
-        return;
-    }
-
-    const int currentFrame = ImGui::GetFrameCount();
-    if (s_pendingCastWindowFrame == currentFrame) {
-        logAttemptBlockedByDebounce("pending-cast-window");
-        return;
-    }
-
-    static uintptr_t s_lastBattleManagerTracked = 0;
-    static int s_lastSelfGuidTracked = 0;
-    static int s_lastSpellIdTracked = -1;
-
-    if (!Config.auto_menu.enable_retribution) return;
-    if (!AutoRetriIsInMatch()) {
-        if (s_lastBattleManagerTracked != 0 || s_lastSelfGuidTracked != 0 || s_lastSpellIdTracked != -1) {
-            ResetManualRetriCache("match-changed/out-of-match");
-            s_lastBattleManagerTracked = 0;
-            s_lastSelfGuidTracked = 0;
-            s_lastSpellIdTracked = -1;
-        }
-        return;
-    }
-
-    void *battleManagerInstance = nullptr;
-    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
-    if (!battleManagerInstance) return;
-
-    auto battleManager = (uintptr_t) battleManagerInstance;
-    auto m_LocalPlayerShow = *(uintptr_t *) (battleManager + BattleManager_m_LocalPlayerShow());
-    if (!m_LocalPlayerShow) return;
-
-    const int selfGuid = *(int *) (m_LocalPlayerShow + EntityBase_m_uGuid());
-    if (s_lastBattleManagerTracked != 0 && s_lastBattleManagerTracked != battleManager) {
-        ResetManualRetriCache("match-changed/battle-manager");
-    }
-    if (s_lastSelfGuidTracked != 0 && s_lastSelfGuidTracked != selfGuid) {
-        ResetManualRetriCache("hero-changed/self-guid");
-    }
-    s_lastBattleManagerTracked = battleManager;
-    s_lastSelfGuidTracked = selfGuid;
-
-    auto coolDownData = getPlayerCoolDown(selfGuid, m_LocalPlayerShow);
-    if (s_waitingCooldownActivation) {
-        if (coolDownData.spell > 0) {
-            s_waitingCooldownActivation = false;
-            LOGI("[Debug][AutoRetri] cooldownActivationDetected spellCooldown=%d", coolDownData.spell);
-        } else {
-            logAttemptBlockedByDebounce("waiting-cooldown-activation");
-            return;
-        }
-    }
-
-    static uintptr_t s_lastBattleManagerForLog = 0;
-    static bool s_hasLoggedBattleSpellInfo = false;
-    if (!s_hasLoggedBattleSpellInfo || s_lastBattleManagerForLog != battleManager) {
-        RuntimeBattleSpellInfo spellInfo = GetRuntimeBattleSpellInfo(m_LocalPlayerShow);
-        const char *spellName = AutoRetriSpellNameById(spellInfo.spellId);
-        LOGI("[Debug][AutoRetri] match-spell-info detectedBattleSpellId=%d detectedBattleSpellSlot=%d retriCommandCode=%d retriCommandCodeResolved=%d detectedBattleSpellName=%s",
-             spellInfo.spellId, spellInfo.spellSlot, spellInfo.retriCommandCode, spellInfo.retriCommandCodeResolved,
-             spellName ? spellName : "unknown");
-        s_lastBattleManagerForLog = battleManager;
-        s_hasLoggedBattleSpellInfo = true;
-    }
-
-    RuntimeBattleSpellInfo activeSpellInfo = GetRuntimeBattleSpellInfo(m_LocalPlayerShow);
-    if (s_lastSpellIdTracked != -1 && s_lastSpellIdTracked != activeSpellInfo.spellId) {
-        ResetManualRetriCache("battle-spell-changed");
-    }
-    s_lastSpellIdTracked = activeSpellInfo.spellId;
-    if (activeSpellInfo.spellId != 20020) {
-        return;
-    }
-    if (!IsRetriPayloadReady(activeSpellInfo)) {
-        LogCommandCodeUnresolvedOncePerMatch(battleManager, activeSpellInfo.spellId, activeSpellInfo.spellSlot, "auto-blocked");
-        return;
-    }
-
-    RetriTargetEvalResult eval = EvaluateRetriTarget(battleManager, m_LocalPlayerShow);
-    if (!eval.found) return;
-
-    s_lastAttemptTickMs = nowMs;
-    s_pendingCastWindowFrame = currentFrame;
-
-    const bool casted = TryCastRetribution(battleManager, m_LocalPlayerShow, eval.targetGuid);
-    if (casted) {
-        s_waitingCooldownActivation = true;
-    }
 }
 
 static inline uint ResolveJungleCampType(int selfCampType, int entityCampType) {
@@ -1259,7 +712,6 @@ void NewDrawESP(ImDrawList *draw, float screenWidth, float screenHeight) {
     Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
     if (!battleBridgeInstance || !battleManagerInstance) {
         if (!loggedMissingOffsets) {
-            LOGI("[Debug][ESP] waiting instances bridge=%p manager=%p", battleBridgeInstance, battleManagerInstance);
             loggedMissingOffsets = true;
         }
         return;
@@ -1389,7 +841,6 @@ void NewDrawESP(ImDrawList *draw, float screenWidth, float screenHeight) {
         }
     }
     if (Config.MinimapIcon && (time(nullptr) - s_lastMinimapOverlayLog >= 5)) {
-        LOGI("[Debug][MinimapOverlay] soldier=%d jungle=%d", minimapSoldierOverlayCount, minimapJungleOverlayCount);
         s_lastMinimapOverlayLog = time(nullptr);
     }
     /*enemy*/
