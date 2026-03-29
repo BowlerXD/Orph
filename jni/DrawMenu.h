@@ -63,6 +63,7 @@ void loadConfig() {
     read(fd, &Config, sizeof(Config));
     read(fd, &Aim, sizeof(Aim));
     read(fd, &SetFieldOfView, sizeof(SetFieldOfView));
+    read(fd, &sliderValue, sizeof(sliderValue));
 
     struct PersistedMaphackAdjustments {
         ImVec2 startPos;
@@ -92,6 +93,7 @@ void saveConfig(){
     write(fd, &Config , sizeof(Config));
     write(fd, &Aim, sizeof(Aim));
     write(fd, &SetFieldOfView, sizeof(SetFieldOfView));
+    write(fd, &sliderValue, sizeof(sliderValue));
 
     struct PersistedMaphackAdjustments {
         ImVec2 startPos;
