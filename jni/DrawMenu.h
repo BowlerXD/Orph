@@ -257,6 +257,8 @@ void Trinage_background()
 int selectedOption = 0;
 std::string cimodkey = "https://t0pgamemurah.xyz/freeKey";
 std::string xyzBuyKey = "https://t0pgamemurah.xyz/freeKey";
+bool g_EnableAIControl = false;
+std::string g_AiControlStatus = "AI control is idle.";
 
 void DrawMenu() {
 	const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
@@ -465,6 +467,28 @@ void DrawMenu() {
                 ImGui::EndTabItem();
             }
 			}
+            if (ImGui::BeginTabItem("AI")) {
+                ImGui::BeginGroupPanel("AI Control", ImVec2(-1.0f, 0.0f));
+                {
+                    ImGui::Checkbox("Enable AI Control", &g_EnableAIControl);
+                    ImGui::TextWrapped("Manual apply only (no auto trigger while AFK).");
+
+                    if (ImGui::Button("Apply AI Control", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
+                        int playerUid = 0;
+                        uintptr_t uidOffset = SystemData_m_uiID();
+                        if (uidOffset) playerUid = *(int *)(uidOffset);
+
+                        uint32_t targetUid = g_EnableAIControl ? static_cast<uint32_t>(playerUid) : 0u;
+                        bool applied = SetPlayerAIControl(false, 0, targetUid, false, 0);
+                        g_AiControlStatus = applied ? "AI control applied manually (AFK trigger disabled)." : "Failed to apply AI control (not in match or method missing).";
+                    }
+
+                    ImGui::Spacing();
+                    ImGui::TextWrapped("%s", g_AiControlStatus.c_str());
+                }
+                ImGui::EndGroupPanel();
+                ImGui::EndTabItem();
+            }
 
 				static int SelectInfo = 0;
             static ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV;

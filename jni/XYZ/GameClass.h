@@ -207,6 +207,12 @@ inline uintptr_t ResolveShowSelfPlayer_TryUseSkill() {
     return method;
 }
 
+// dump: ShowSelfPlayer.SetAIControl(showAfkInfo, afkHeroId, afkPlayerId, showAsk, askEndTime) -> argCount 5
+inline uintptr_t ResolveShowSelfPlayer_SetAIControl() {
+    uintptr_t method = (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowSelfPlayer", "SetAIControl", 5);
+    return method;
+}
+
 #define ShowSelfPlayer_TryUseSkill2 ResolveShowSelfPlayer_TryUseSkill2()
 #define ShowSelfPlayer_TryUseSkill ResolveShowSelfPlayer_TryUseSkill()
 #define ShowSelfPlayer_OnUpdate (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowSelfPlayer", "Unity_OnUpdate",0)
@@ -648,6 +654,16 @@ uintptr_t GetPlayerRealSelf() {
     Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "LogicBattleManager", "Instance", &instance);
     if (instance == NULL) return 0;
     return reinterpret_cast<uintptr_t(__fastcall *)(void *)>(LogicBattleManager_GetPlayerRealSelf())((void *)instance);
+}
+
+bool SetPlayerAIControl(bool showAfkInfo, int afkHeroId, uint32_t afkPlayerId, bool showAsk, uint32_t askEndTime) {
+    uintptr_t selfPlayer = GetPlayerRealSelf();
+    uintptr_t method = ResolveShowSelfPlayer_SetAIControl();
+    if (!selfPlayer || !method) return false;
+
+    auto fn = reinterpret_cast<void(__fastcall *)(void *, bool, int, uint32_t, bool, uint32_t)>(method);
+    fn(reinterpret_cast<void *>(selfPlayer), showAfkInfo, afkHeroId, afkPlayerId, showAsk, askEndTime);
+    return true;
 }
 
 Vector3 ShowEntity_get_Position(void *instance) {
