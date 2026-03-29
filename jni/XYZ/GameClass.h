@@ -666,6 +666,38 @@ bool SetPlayerAIControl(bool showAfkInfo, int afkHeroId, uint32_t afkPlayerId, b
     return true;
 }
 
+struct PendingAIControlRequest {
+    bool pending;
+    bool showAfkInfo;
+    int afkHeroId;
+    uint32_t afkPlayerId;
+    bool showAsk;
+    uint32_t askEndTime;
+};
+
+static PendingAIControlRequest g_pendingAIControlRequest{false, false, 0, 0, false, 0};
+
+inline void QueuePlayerAIControl(bool showAfkInfo, int afkHeroId, uint32_t afkPlayerId, bool showAsk, uint32_t askEndTime) {
+    g_pendingAIControlRequest.pending = true;
+    g_pendingAIControlRequest.showAfkInfo = showAfkInfo;
+    g_pendingAIControlRequest.afkHeroId = afkHeroId;
+    g_pendingAIControlRequest.afkPlayerId = afkPlayerId;
+    g_pendingAIControlRequest.showAsk = showAsk;
+    g_pendingAIControlRequest.askEndTime = askEndTime;
+}
+
+inline bool ProcessPendingPlayerAIControl() {
+    if (!g_pendingAIControlRequest.pending) return false;
+    g_pendingAIControlRequest.pending = false;
+    return SetPlayerAIControl(
+        g_pendingAIControlRequest.showAfkInfo,
+        g_pendingAIControlRequest.afkHeroId,
+        g_pendingAIControlRequest.afkPlayerId,
+        g_pendingAIControlRequest.showAsk,
+        g_pendingAIControlRequest.askEndTime
+    );
+}
+
 Vector3 ShowEntity_get_Position(void *instance) {
     return reinterpret_cast<Vector3(__fastcall *)(void *)>(ShowEntity_getPosition())(instance);
 }
