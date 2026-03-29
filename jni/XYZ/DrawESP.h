@@ -592,8 +592,10 @@ static inline void DrawObjectiveAlertCard(ImDrawList *draw, int objectiveId, int
     float ratio = std::max(0.0f, std::min(1.0f, (float)hp / (float)hpMax));
     const char *alertText = (objectiveId == 2002) ? "TURTLE IS UNDER ATTACK" : "LORD IS UNDER ATTACK";
 
-    // Place alert to the right of minimap region (compact, image-first style).
-    ImVec2 cardTopLeft(screenWidth * 0.315f, screenHeight * 0.035f);
+    // Place alert anchored to minimap (right side + slight vertical offset).
+    const float gapX = 10.0f;
+    const float offsetY = 8.0f;
+    ImVec2 cardTopLeft(minimapPosX + minimapWidth + gapX, minimapPosY + offsetY);
     float cardWidth = std::clamp(screenWidth * 0.22f, 240.0f, 420.0f);
     float cardHeight = std::clamp(screenHeight * 0.09f, 60.0f, 120.0f);
     ImVec2 cardSize(cardWidth, cardHeight);
