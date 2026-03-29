@@ -818,15 +818,30 @@ static inline bool TryCastRetribution(uintptr_t battleManager, uintptr_t localPl
 
 static inline void UpdateAutoRetribution() {
     static int64_t s_lastAttemptTickMs = 0;
-    static int64_t s_lastCastTickMs = 0;
-    static constexpr int64_t kAttemptCooldownMs = 200;
-    static constexpr int64_t kPostCastLockMs = 400;
+    static constexpr int64_t kAttemptDebounceMs = 220;
+    static int s_pendingCastWindowFrame = -1;
+    static bool s_waitingCooldownActivation = false;
 
     const int64_t nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now().time_since_epoch()).count();
-    if ((nowMs - s_lastAttemptTickMs) < kAttemptCooldownMs) return;
-    if ((nowMs - s_lastCastTickMs) < kPostCastLockMs) return;
-    s_lastAttemptTickMs = nowMs;
+
+    auto logAttemptBlockedByDebounce = [&](const char *reason) {
+        if (ShouldLogAutoRetriDebug(std::string("attemptBlockedByDebounce-") + reason, nowMs, 350)) {
+            LOGI("[Debug][AutoRetri] attemptBlockedByDebounce reason=%s sinceLastAttemptMs=%" PRId64 " pendingCastWindowFrame=%d waitingCooldownActivation=%d",
+                 reason, nowMs - s_lastAttemptTickMs, s_pendingCastWindowFrame, s_waitingCooldownActivation);
+        }
+    };
+
+    if ((nowMs - s_lastAttemptTickMs) < kAttemptDebounceMs) {
+        logAttemptBlockedByDebounce("time-debounce");
+        return;
+    }
+
+    const int currentFrame = ImGui::GetFrameCount();
+    if (s_pendingCastWindowFrame == currentFrame) {
+        logAttemptBlockedByDebounce("pending-cast-window");
+        return;
+    }
 
     if (!Config.auto_menu.enable_retribution) return;
     if (!AutoRetriIsInMatch()) return;
@@ -838,6 +853,18 @@ static inline void UpdateAutoRetribution() {
     auto battleManager = (uintptr_t) battleManagerInstance;
     auto m_LocalPlayerShow = *(uintptr_t *) (battleManager + BattleManager_m_LocalPlayerShow());
     if (!m_LocalPlayerShow) return;
+
+    const int selfGuid = *(int *) (m_LocalPlayerShow + EntityBase_m_uGuid());
+    auto coolDownData = getPlayerCoolDown(selfGuid, m_LocalPlayerShow);
+    if (s_waitingCooldownActivation) {
+        if (coolDownData.spell > 0) {
+            s_waitingCooldownActivation = false;
+            LOGI("[Debug][AutoRetri] cooldownActivationDetected spellCooldown=%d", coolDownData.spell);
+        } else {
+            logAttemptBlockedByDebounce("waiting-cooldown-activation");
+            return;
+        }
+    }
 
     static uintptr_t s_lastBattleManagerForLog = 0;
     static bool s_hasLoggedBattleSpellInfo = false;
@@ -858,9 +885,12 @@ static inline void UpdateAutoRetribution() {
     RetriTargetEvalResult eval = EvaluateRetriTarget(battleManager, m_LocalPlayerShow);
     if (!eval.found) return;
 
+    s_lastAttemptTickMs = nowMs;
+    s_pendingCastWindowFrame = currentFrame;
+
     const bool casted = TryCastRetribution(battleManager, m_LocalPlayerShow, eval.targetGuid);
     if (casted) {
-        s_lastCastTickMs = nowMs;
+        s_waitingCooldownActivation = true;
     }
 }
 
