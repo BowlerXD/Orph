@@ -153,8 +153,76 @@ uintptr_t VirtualButton_m_States(){
 	return (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "VirtualButton", "m_States");
 }
 
-#define ShowSelfPlayer_TryUseSkill2 (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowSelfPlayer", "TryUseSkill", 9)
-#define ShowSelfPlayer_TryUseSkill (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowSelfPlayer", "TryUseSkill", 11)
+// dump: ShowSelfPlayer.TryUseSkill(out state, ...) -> overload argCount 10
+inline uintptr_t ResolveShowSelfPlayer_TryUseSkill2() {
+    static bool loggedResolved = false;
+    static bool loggedMissing = false;
+    uintptr_t method = (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowSelfPlayer", "TryUseSkill", 10);
+    if (!method) {
+        if (!loggedMissing) {
+            LOGW("[TryUseSkill] resolve failed for ShowSelfPlayer::TryUseSkill overload (argCount=10), skipping call.");
+            loggedMissing = true;
+        }
+        return 0;
+    }
+    if (!loggedResolved) {
+        LOGI("[TryUseSkill] resolved ShowSelfPlayer::TryUseSkill overload (argCount=10) at %p", (void *) method);
+        loggedResolved = true;
+    }
+    return method;
+}
+
+// dump: ShowSelfPlayer.TryUseSkill(out state, ...) -> overload argCount 12
+inline uintptr_t ResolveShowSelfPlayer_TryUseSkill() {
+    static bool loggedResolved = false;
+    static bool loggedMissing = false;
+    uintptr_t method = (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowSelfPlayer", "TryUseSkill", 12);
+    if (!method) {
+        if (!loggedMissing) {
+            LOGW("[TryUseSkill] resolve failed for ShowSelfPlayer::TryUseSkill(out state, ...) (argCount=12), skipping call.");
+            loggedMissing = true;
+        }
+        return 0;
+    }
+    if (!loggedResolved) {
+        LOGI("[TryUseSkill] resolved ShowSelfPlayer::TryUseSkill(out state, ...) (argCount=12) at %p", (void *) method);
+        loggedResolved = true;
+    }
+    return method;
+}
+
+// callsite cast for TryUseSkill(out state, ...) overload with 12 managed args from latest dump
+using ShowSelfPlayerTryUseSkillOutState12Fn = bool (*)(
+        void *thiz,
+        int *outState,
+        int arg1, int arg2, int arg3, int arg4, int arg5, int arg6,
+        int arg7, int arg8, int arg9, int arg10, int arg11
+);
+
+inline bool CallShowSelfPlayer_TryUseSkillOutState12(
+        void *thiz,
+        int *outState,
+        int arg1, int arg2, int arg3, int arg4, int arg5, int arg6,
+        int arg7, int arg8, int arg9, int arg10, int arg11
+) {
+    static bool loggedNullFn = false;
+    uintptr_t method = ResolveShowSelfPlayer_TryUseSkill();
+    if (!method) {
+        return false;
+    }
+    auto fn = reinterpret_cast<ShowSelfPlayerTryUseSkillOutState12Fn>(method);
+    if (!fn) {
+        if (!loggedNullFn) {
+            LOGW("[TryUseSkill] function pointer cast failed for argCount=12, skipping call.");
+            loggedNullFn = true;
+        }
+        return false;
+    }
+    return fn(thiz, outState, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11);
+}
+
+#define ShowSelfPlayer_TryUseSkill2 ResolveShowSelfPlayer_TryUseSkill2()
+#define ShowSelfPlayer_TryUseSkill ResolveShowSelfPlayer_TryUseSkill()
 #define ShowSelfPlayer_OnUpdate (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowSelfPlayer", "Unity_OnUpdate",0)
 
 uintptr_t SystemData_GetBattlePlayerInfo() {
