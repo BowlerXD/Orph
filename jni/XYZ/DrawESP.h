@@ -594,13 +594,14 @@ static inline void DrawObjectiveAlertCard(ImDrawList *draw, int objectiveId, int
     const bool isLord = (objectiveId == 2002);
     const char *alertText = isLord ? "LORD IS UNDER ATTACK" : "TURTLE IS UNDER ATTACK";
 
-    // Place alert anchored to minimap (right side + slight vertical offset).
-    const float gapX = 14.0f;
-    const float offsetY = std::clamp(minimapHeight * 0.06f, 10.0f, 22.0f);
-    ImVec2 cardTopLeft(minimapPosX + minimapWidth + gapX, minimapPosY + offsetY);
+    // Place alert above the minimap zoom icon (right side of minimap).
+    const float gapX = 12.0f;
     float cardWidth = std::clamp(screenWidth * 0.22f, 240.0f, 420.0f);
     float cardHeight = std::clamp(screenHeight * 0.09f, 60.0f, 120.0f);
     ImVec2 cardSize(cardWidth, cardHeight);
+    const float zoomAnchorX = minimapPosX + minimapWidth + std::clamp(minimapWidth * 0.07f, 16.0f, 30.0f);
+    const float zoomAnchorY = minimapPosY + minimapHeight * 0.50f;
+    ImVec2 cardTopLeft(zoomAnchorX + gapX, zoomAnchorY - cardSize.y - std::clamp(cardSize.y * 0.14f, 10.0f, 18.0f));
     ImVec2 cardBottomRight(cardTopLeft.x + cardSize.x, cardTopLeft.y + cardSize.y);
 
     // Bubble-style panel: rounded main body + pointer tail to minimap zoom area.
@@ -612,12 +613,12 @@ static inline void DrawObjectiveAlertCard(ImDrawList *draw, int objectiveId, int
 
     const float tailHalfHeight = std::clamp(cardSize.y * 0.14f, 8.0f, 18.0f);
     const float tailTipOffsetX = std::clamp(cardSize.x * 0.09f, 22.0f, 38.0f);
-    const float minimapZoomTargetY = minimapPosY + minimapHeight * 0.50f;
+    const float minimapZoomTargetY = zoomAnchorY;
     const float tailCenterY = std::clamp(minimapZoomTargetY, cardTopLeft.y + cardRounding + tailHalfHeight, cardBottomRight.y - cardRounding - tailHalfHeight);
     ImVec2 tailPoly[3] = {
         ImVec2(cardTopLeft.x + 1.0f, tailCenterY - tailHalfHeight),
         ImVec2(cardTopLeft.x + 1.0f, tailCenterY + tailHalfHeight),
-        ImVec2(cardTopLeft.x - tailTipOffsetX, minimapZoomTargetY)
+        ImVec2(zoomAnchorX, minimapZoomTargetY)
     };
     draw->AddConvexPolyFilled(tailPoly, 3, bubbleFill);
     draw->AddPolyline(tailPoly, 3, bubbleBorder, ImDrawFlags_Closed, 1.4f);
