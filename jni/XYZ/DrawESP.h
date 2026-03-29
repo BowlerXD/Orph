@@ -540,10 +540,64 @@ static inline bool AutoRetriIsInMatch() {
     return battleBridgeInstance && battleManagerInstance;
 }
 
-static inline bool AutoRetriHasRetributionSpell(uintptr_t localPlayerShow) {
-    if (!localPlayerShow) return false;
-    int summonSkillId = *(int *) ((uintptr_t)localPlayerShow + ShowPlayer_m_iSummonSkillId());
-    return summonSkillId == 20020;
+struct RuntimeBattleSpellInfo {
+    int spellId = 0;
+    int spellSlot = -1;
+    bool valid = false;
+};
+
+static inline const char *AutoRetriSpellNameById(int spellId) {
+    switch (spellId) {
+        case 20150: return "Execute";
+        case 20020: return "Retribution";
+        case 20030: return "Inspire";
+        case 20040: return "Sprint";
+        case 20050: return "Revitalize";
+        case 20060: return "Aegis";
+        case 20070: return "Petrify";
+        case 20080: return "Purify";
+        case 20140: return "Flameshot";
+        case 20100: return "Flicker";
+        case 20160: return "Arrival";
+        case 20190: return "Vengeance";
+        default: return nullptr;
+    }
+}
+
+static inline RuntimeBattleSpellInfo GetRuntimeBattleSpellInfo(uintptr_t localPlayerShow) {
+    RuntimeBattleSpellInfo info{};
+    if (!localPlayerShow) return info;
+
+    static const uintptr_t kShowEntityOwnSkillCompOffset = ShowEntity_m_OwnSkillComp;
+    static const uintptr_t kShowOwnSkillCompSkillListOffset = ShowOwnSkillComp_m_SkillList();
+    static const uintptr_t kShowPlayerSummonSkillIdOffset = ShowPlayer_m_iSummonSkillId();
+    static const uintptr_t kShowSkillDataTranIdOffset = ShowSkillData_m_TranID();
+
+    if (!kShowEntityOwnSkillCompOffset || !kShowOwnSkillCompSkillListOffset ||
+        !kShowPlayerSummonSkillIdOffset || !kShowSkillDataTranIdOffset) {
+        return info;
+    }
+
+    info.spellId = *(int *) (localPlayerShow + kShowPlayerSummonSkillIdOffset);
+    if (info.spellId <= 0) return info;
+
+    auto m_OwnSkillComp = *(uintptr_t *) (localPlayerShow + kShowEntityOwnSkillCompOffset);
+    if (!m_OwnSkillComp) return info;
+
+    auto m_SkillList = *(List<uintptr_t> **) (m_OwnSkillComp + kShowOwnSkillCompSkillListOffset);
+    if (!m_SkillList) return info;
+
+    const int skillCount = m_SkillList->getSize();
+    for (int i = 0; i < skillCount; i++) {
+        auto p_SkillList = m_SkillList->getItems()[i];
+        if (!p_SkillList) continue;
+        const int tranId = *(int *) ((uintptr_t)p_SkillList + kShowSkillDataTranIdOffset);
+        if (tranId != info.spellId) continue;
+        info.spellSlot = i;
+        info.valid = true;
+        return info;
+    }
+    return info;
 }
 
 static inline bool IsSelectedAutoRetriMonster(int monsterId) {
@@ -683,8 +737,14 @@ static inline bool TryCastRetribution(uintptr_t battleManager, uintptr_t localPl
         return false;
     }
 
-    if (!AutoRetriHasRetributionSpell(localPlayerShow)) {
-        LOGI("[Debug][AutoRetri] cast-skip reason=no-retribution");
+    RuntimeBattleSpellInfo spellInfo = GetRuntimeBattleSpellInfo(localPlayerShow);
+    if (spellInfo.spellId != 20020) {
+        LOGI("[Debug][AutoRetri] cast-skip reason=active-spell-not-retribution spellId=%d slot=%d",
+             spellInfo.spellId, spellInfo.spellSlot);
+        return false;
+    }
+    if (!spellInfo.valid || spellInfo.spellSlot < 0) {
+        LOGI("[Debug][AutoRetri] cast-skip reason=spell-slot-not-found spellId=%d", spellInfo.spellId);
         return false;
     }
 
@@ -719,20 +779,19 @@ static inline bool TryCastRetribution(uintptr_t battleManager, uintptr_t localPl
     }
 
     int outState = 0;
-    constexpr int kRetributionSpellSlotIndex = 5;
     LOGI("[Debug][AutoRetri] cast-args spellSlot=%d runtimeTargetGuid=%" PRIu64 " (0x%016" PRIx64 ") paramOrder=[slot,targetGuid,p3..p11]",
-         kRetributionSpellSlotIndex, targetGuid, targetGuid);
+         spellInfo.spellSlot, targetGuid, targetGuid);
     const bool casted = CallShowSelfPlayer_TryUseSkillOutState12(
-        (void *)localPlayerShow, &outState, kRetributionSpellSlotIndex, targetGuid, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        (void *)localPlayerShow, &outState, spellInfo.spellSlot, targetGuid, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     const int64_t nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now().time_since_epoch()).count();
     if (ShouldLogAutoRetriDebug("cast-result-" + std::to_string((unsigned long long)targetGuid), nowMs, 7000)) {
         LOGI("[Debug][AutoRetri] cast-result status=%s reasonCode=%d targetGuid=%" PRIu64 " (0x%016" PRIx64 ") targetId=%d hp=%d hpMax=%d dist=%.2f inRange=%d spellReady=%d sameCampType=%d castApiTarget=runtimeGuid castApiSpellSlot=%d",
              casted ? "success" : "fail", outState, targetGuid, targetGuid, eval.targetId, eval.targetHp, eval.targetHpMax,
-             eval.targetDistance, eval.targetInRange, eval.spellReady, eval.sameCampType, kRetributionSpellSlotIndex);
+             eval.targetDistance, eval.targetInRange, eval.spellReady, eval.sameCampType, spellInfo.spellSlot);
         if (eval.targetInRange && !casted) {
             LOGI("[Debug][AutoRetri] cast-fail-diagnostic reasonCode=%d check-api-target=entityId-vs-worldPosition check-api-spell-slot=current=%d",
-                 outState, kRetributionSpellSlotIndex);
+                 outState, spellInfo.spellSlot);
         }
     }
     s_lastCastTargetGuid = targetGuid;
@@ -762,6 +821,22 @@ static inline void UpdateAutoRetribution() {
     auto battleManager = (uintptr_t) battleManagerInstance;
     auto m_LocalPlayerShow = *(uintptr_t *) (battleManager + BattleManager_m_LocalPlayerShow());
     if (!m_LocalPlayerShow) return;
+
+    static uintptr_t s_lastBattleManagerForLog = 0;
+    static bool s_hasLoggedBattleSpellInfo = false;
+    if (!s_hasLoggedBattleSpellInfo || s_lastBattleManagerForLog != battleManager) {
+        RuntimeBattleSpellInfo spellInfo = GetRuntimeBattleSpellInfo(m_LocalPlayerShow);
+        const char *spellName = AutoRetriSpellNameById(spellInfo.spellId);
+        LOGI("[Debug][AutoRetri] match-spell-info detectedBattleSpellId=%d detectedBattleSpellSlot=%d detectedBattleSpellName=%s",
+             spellInfo.spellId, spellInfo.spellSlot, spellName ? spellName : "unknown");
+        s_lastBattleManagerForLog = battleManager;
+        s_hasLoggedBattleSpellInfo = true;
+    }
+
+    RuntimeBattleSpellInfo activeSpellInfo = GetRuntimeBattleSpellInfo(m_LocalPlayerShow);
+    if (activeSpellInfo.spellId != 20020) {
+        return;
+    }
 
     RetriTargetEvalResult eval = EvaluateRetriTarget(battleManager, m_LocalPlayerShow);
     if (!eval.found) return;
