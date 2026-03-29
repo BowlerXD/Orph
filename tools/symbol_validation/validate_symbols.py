@@ -8,7 +8,7 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set
 
 
 METHOD_DECL_RE = re.compile(
@@ -78,11 +78,48 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def split_top_level_args(args_blob: str) -> List[str]:
+    parts: List[str] = []
+    current: List[str] = []
+    depth_angle = 0
+    depth_round = 0
+    depth_square = 0
+
+    for char in args_blob:
+        if char == "," and depth_angle == 0 and depth_round == 0 and depth_square == 0:
+            segment = "".join(current).strip()
+            if segment:
+                parts.append(segment)
+            current = []
+            continue
+
+        current.append(char)
+
+        if char == "<":
+            depth_angle += 1
+        elif char == ">":
+            depth_angle = max(0, depth_angle - 1)
+        elif char == "(":
+            depth_round += 1
+        elif char == ")":
+            depth_round = max(0, depth_round - 1)
+        elif char == "[":
+            depth_square += 1
+        elif char == "]":
+            depth_square = max(0, depth_square - 1)
+
+    tail = "".join(current).strip()
+    if tail:
+        parts.append(tail)
+
+    return parts
+
+
 def parse_arg_count(args_blob: str) -> int:
     stripped = args_blob.strip()
     if not stripped:
         return 0
-    parts = [p.strip() for p in stripped.split(",")]
+    parts = split_top_level_args(stripped)
     return sum(1 for p in parts if p and p != "void")
 
 
@@ -138,6 +175,11 @@ def load_critical_symbols(path: Path) -> List[dict]:
 
 def evaluate_symbols(symbols: List[dict], classes: Dict[str, ClassData]) -> List[SymbolResult]:
     results: List[SymbolResult] = []
+    classes_by_name: Dict[str, List[str]] = {}
+
+    for fqcn in classes:
+        class_name = fqcn.rsplit(".", 1)[-1]
+        classes_by_name.setdefault(class_name, []).append(fqcn)
 
     for symbol in symbols:
         symbol_type = symbol["type"]
@@ -148,17 +190,40 @@ def evaluate_symbols(symbols: List[dict], classes: Dict[str, ClassData]) -> List
 
         fqcn = f"{namespace}.{class_name}".strip(".")
         class_data = classes.get(fqcn)
+        class_lookup_note: Optional[str] = None
+
+        if not class_data:
+            fallback_matches = classes_by_name.get(class_name, [])
+            if len(fallback_matches) == 1:
+                class_data = classes[fallback_matches[0]]
+                class_lookup_note = (
+                    f"class matched by name only (expected '{fqcn}', found '{fallback_matches[0]}')"
+                )
+            elif len(fallback_matches) > 1:
+                class_lookup_note = (
+                    f"ambiguous class name '{class_name}' in dump: {', '.join(sorted(fallback_matches))}"
+                )
 
         if symbol_type == "class":
             if class_data:
-                results.append(SymbolResult(symbol_type, namespace, class_name, None, None, "FOUND", "class exists in dump"))
+                notes = class_lookup_note or "class exists in dump"
+                results.append(SymbolResult(symbol_type, namespace, class_name, None, None, "FOUND", notes))
             else:
-                results.append(SymbolResult(symbol_type, namespace, class_name, None, None, "MISSING", "class not found in dump"))
+                notes = class_lookup_note or "class not found in dump"
+                results.append(SymbolResult(symbol_type, namespace, class_name, None, None, "MISSING", notes))
             continue
 
         if not class_data:
             results.append(
-                SymbolResult(symbol_type, namespace, class_name, member_name, arg_count, "MISSING", "class not found in dump")
+                SymbolResult(
+                    symbol_type,
+                    namespace,
+                    class_name,
+                    member_name,
+                    arg_count,
+                    "MISSING",
+                    class_lookup_note or "class not found in dump",
+                )
             )
             continue
 
