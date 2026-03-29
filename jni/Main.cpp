@@ -329,6 +329,8 @@ void *main_thread(void *) {
     Il2CppAttach("liblogic.so");
     sleep(5);
 
+    InstallShowSelfPlayerTryUseSkillOutState12Hook();
+
 	// hideLibrary(); // disabled for stability during loading
 	
 	DobbyInstrument(dlsym(RTLD_NEXT, "eglSwapBuffers"), eglSwapBuffers_handler);

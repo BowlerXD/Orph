@@ -779,10 +779,27 @@ static inline bool TryCastRetribution(uintptr_t battleManager, uintptr_t localPl
     }
 
     int outState = 0;
-    LOGI("[Debug][AutoRetri] cast-args spellSlot=%d runtimeTargetGuid=%" PRIu64 " (0x%016" PRIx64 ") paramOrder=[slot,targetGuid,p3..p11]",
-         spellInfo.spellSlot, targetGuid, targetGuid);
-    const bool casted = CallShowSelfPlayer_TryUseSkillOutState12(
-        (void *)localPlayerShow, &outState, spellInfo.spellSlot, targetGuid, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    TryUseSkillOutState12Args autoArgs{
+        spellInfo.spellSlot, targetGuid,
+        0, 0, 0, 0, 0, 0, 0, 0, 0
+    };
+
+    if (g_ManualRetriSnapshotCaptured && g_ManualRetriSnapshotArgs.p2 == targetGuid) {
+        // Mirror manual parameter order/payload as close as possible for identical target.
+        autoArgs = g_ManualRetriSnapshotArgs;
+        autoArgs.p1 = spellInfo.spellSlot;
+        autoArgs.p2 = targetGuid;
+        LOGI("[Debug][AutoRetri] cast-args source=manual-snapshot slot=%d targetGuid=%" PRIu64 " (0x%016" PRIx64 ")",
+             autoArgs.p1, autoArgs.p2, autoArgs.p2);
+    } else {
+        LOGI("[Debug][AutoRetri] cast-args source=default slot=%d runtimeTargetGuid=%" PRIu64 " (0x%016" PRIx64 ") paramOrder=[p1..p11]",
+             autoArgs.p1, autoArgs.p2, autoArgs.p2);
+    }
+
+    const bool casted = CallShowSelfPlayer_TryUseSkillOutState12_AutoRetri(
+        (void *)localPlayerShow, &outState,
+        autoArgs.p1, autoArgs.p2, autoArgs.p3, autoArgs.p4, autoArgs.p5, autoArgs.p6,
+        autoArgs.p7, autoArgs.p8, autoArgs.p9, autoArgs.p10, autoArgs.p11);
     const int64_t nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now().time_since_epoch()).count();
     if (ShouldLogAutoRetriDebug("cast-result-" + std::to_string((unsigned long long)targetGuid), nowMs, 7000)) {
