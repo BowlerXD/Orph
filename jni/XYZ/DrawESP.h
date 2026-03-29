@@ -901,6 +901,9 @@ static inline void UpdateAutoRetribution() {
     static constexpr int64_t kAttemptDebounceMs = 220;
     static int s_pendingCastWindowFrame = -1;
     static bool s_waitingCooldownActivation = false;
+    static uint64_t s_lastFailedTargetGuid = 0;
+    static int s_failedCastStreak = 0;
+    static int64_t s_nextRetryEligibleMs = 0;
 
     const int64_t nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now().time_since_epoch()).count();
@@ -914,6 +917,10 @@ static inline void UpdateAutoRetribution() {
 
     if ((nowMs - s_lastAttemptTickMs) < kAttemptDebounceMs) {
         logAttemptBlockedByDebounce("time-debounce");
+        return;
+    }
+    if (nowMs < s_nextRetryEligibleMs) {
+        logAttemptBlockedByDebounce("retry-backoff");
         return;
     }
 
@@ -995,12 +1002,31 @@ static inline void UpdateAutoRetribution() {
     RetriTargetEvalResult eval = EvaluateRetriTarget(battleManager, m_LocalPlayerShow);
     if (!eval.found) return;
 
+    if (s_lastFailedTargetGuid != 0 && s_lastFailedTargetGuid != eval.targetGuid) {
+        // Target switched (dump confirms runtime target guid is per-entity), clear retry backoff.
+        s_lastFailedTargetGuid = 0;
+        s_failedCastStreak = 0;
+        s_nextRetryEligibleMs = 0;
+    }
+
     s_lastAttemptTickMs = nowMs;
     s_pendingCastWindowFrame = currentFrame;
 
     const bool casted = TryCastRetribution(battleManager, m_LocalPlayerShow, eval.targetGuid);
     if (casted) {
         s_waitingCooldownActivation = true;
+        s_lastFailedTargetGuid = 0;
+        s_failedCastStreak = 0;
+        s_nextRetryEligibleMs = 0;
+    } else {
+        s_lastFailedTargetGuid = eval.targetGuid;
+        s_failedCastStreak = std::min(s_failedCastStreak + 1, 6);
+        const int64_t retryBackoffMs = 220 + (int64_t(120) * s_failedCastStreak);
+        s_nextRetryEligibleMs = nowMs + retryBackoffMs;
+        if (ShouldLogAutoRetriDebug("cast-failed-backoff", nowMs, 500)) {
+            LOGI("[Debug][AutoRetri] cast-failed-backoff streak=%d retryAfterMs=%" PRId64 " targetGuid=%" PRIu64 " (0x%016" PRIx64 ")",
+                 s_failedCastStreak, retryBackoffMs, eval.targetGuid, eval.targetGuid);
+        }
     }
 }
 
