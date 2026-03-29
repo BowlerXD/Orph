@@ -291,11 +291,22 @@ inline void CompareManualVsAutoTryUseSkillArgs(const TryUseSkillOutState12Args &
          manualArgs.p1, autoArgs.p1,
          TryUseSkillTargetModeLabel(manualArgs), TryUseSkillTargetModeLabel(autoArgs));
 
-    if (manualArgs.p1 != autoArgs.p1 || manualArgs.p2 != autoArgs.p2 ||
-        manualArgs.p3 != autoArgs.p3 || manualArgs.p4 != autoArgs.p4 || manualArgs.p5 != autoArgs.p5 ||
-        manualArgs.p6 != autoArgs.p6 || manualArgs.p7 != autoArgs.p7 || manualArgs.p8 != autoArgs.p8 ||
-        manualArgs.p9 != autoArgs.p9 || manualArgs.p10 != autoArgs.p10 || manualArgs.p11 != autoArgs.p11) {
+    const bool strictMatch =
+        (manualArgs.p1 == autoArgs.p1 && manualArgs.p2 == autoArgs.p2 &&
+         manualArgs.p3 == autoArgs.p3 && manualArgs.p4 == autoArgs.p4 && manualArgs.p5 == autoArgs.p5 &&
+         manualArgs.p6 == autoArgs.p6 && manualArgs.p7 == autoArgs.p7 && manualArgs.p8 == autoArgs.p8 &&
+         manualArgs.p9 == autoArgs.p9 && manualArgs.p10 == autoArgs.p10 && manualArgs.p11 == autoArgs.p11);
+    const bool relaxedMatch =
+        (manualArgs.p1 == autoArgs.p1 && manualArgs.p2 == autoArgs.p2 &&
+         manualArgs.p3 == autoArgs.p3 && manualArgs.p4 == autoArgs.p4 && manualArgs.p5 == autoArgs.p5 &&
+         manualArgs.p7 == autoArgs.p7 && manualArgs.p8 == autoArgs.p8 &&
+         manualArgs.p10 == autoArgs.p10 && manualArgs.p11 == autoArgs.p11);
+
+    if (!strictMatch) {
         LOGI("[TryUseSkill][compare] diff detected -> manual snapshot vs auto call are not identical.");
+        if (relaxedMatch) {
+            LOGI("[TryUseSkill][compare] relaxed-match=1 -> only volatile fields differ (p6/p9).");
+        }
     } else {
         LOGI("[TryUseSkill][compare] args identical -> auto call already matches manual pattern.");
     }
@@ -316,7 +327,7 @@ inline bool hShowSelfPlayer_TryUseSkillOutState12(
         LogTryUseSkillArgs("manual-snapshot", g_ManualRetriSnapshotArgs);
     } else if (fromAutoRetri) {
         LogTryUseSkillArgs("auto-retri", currentArgs);
-        if (g_ManualRetriSnapshotCaptured && g_ManualRetriSnapshotArgs.p2 == currentArgs.p2) {
+        if (g_ManualRetriSnapshotCaptured) {
             CompareManualVsAutoTryUseSkillArgs(g_ManualRetriSnapshotArgs, currentArgs);
         }
     }
