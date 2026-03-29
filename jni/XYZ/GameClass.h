@@ -1,4 +1,5 @@
 //method
+#include <cstdint>
 
 typedef unsigned long dword;
 
@@ -240,14 +241,14 @@ inline uintptr_t ResolveShowSelfPlayer_TryUseSkill() {
 using ShowSelfPlayerTryUseSkillOutState12Fn = bool (*)(
         void *thiz,
         int *outState,
-        int arg1, int arg2, int arg3, int arg4, int arg5, int arg6,
+        int arg1, uint64_t arg2, int arg3, int arg4, int arg5, int arg6,
         int arg7, int arg8, int arg9, int arg10, int arg11
 );
 
 inline bool CallShowSelfPlayer_TryUseSkillOutState12(
         void *thiz,
         int *outState,
-        int arg1, int arg2, int arg3, int arg4, int arg5, int arg6,
+        int arg1, uint64_t arg2, int arg3, int arg4, int arg5, int arg6,
         int arg7, int arg8, int arg9, int arg10, int arg11
 ) {
     static bool loggedNullFn = false;
