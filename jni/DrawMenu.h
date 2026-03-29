@@ -57,7 +57,7 @@ void HideMenu(bool& bShow) {
 }
 
 void loadConfig() {
-    int fd = open("/storage/emulated/0/Android/data/com.mobile.legends/tmh.ini", O_RDONLY);
+    int fd = open("/storage/emulated/0/Download/orph.ini", O_RDONLY);
     if (fd < 0) return;
 
     read(fd, &Config, sizeof(Config));
@@ -87,9 +87,9 @@ void loadConfig() {
     close(fd);
 }
 void saveConfig(){
-    int fd = open("/storage/emulated/0/Android/data/com.mobile.legends/tmh.ini", O_WRONLY | O_CREAT);
+    int fd = open("/storage/emulated/0/Download/orph.ini", O_WRONLY | O_CREAT);
     if (fd < 0) return;
-    system("chmod 777 /storage/emulated/0/Android/data/com.mobile.legends/tmh.ini");
+    system("chmod 777 /storage/emulated/0/Download/orph.ini");
     write(fd, &Config , sizeof(Config));
     write(fd, &Aim, sizeof(Aim));
     write(fd, &SetFieldOfView, sizeof(SetFieldOfView));
