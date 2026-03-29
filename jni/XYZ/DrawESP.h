@@ -618,20 +618,21 @@ static inline void DrawObjectiveAlertCard(ImDrawList *draw, int objectiveId, int
     draw->AddRectFilled(cardTopLeft, cardBottomRight, bubbleFill, cardRounding);
     draw->AddRect(cardTopLeft, cardBottomRight, bubbleBorder, cardRounding, 0, 1.4f);
 
-    const float tailHalfHeight = std::clamp(cardSize.y * 0.18f, 10.0f, 22.0f);
-    // Pin tail tip directly onto the zoom icon area (right edge of minimap).
-    const float minimapZoomTargetX = zoomAnchorX;
-    const float minimapZoomTargetY = minimapPosY + minimapHeight * 0.56f;
+    // Bigger tail and explicitly point it toward minimap zoom icon area.
+    const float minimapZoomTargetX = minimapPosX + minimapWidth + std::clamp(minimapWidth * 0.06f, 12.0f, 24.0f);
+    const float minimapZoomTargetY = minimapPosY + minimapHeight * 0.92f;
+    const float tailHalfHeight = std::clamp(cardSize.y * 0.24f, 14.0f, 30.0f);
     const float tailCenterY = std::clamp(minimapZoomTargetY, cardTopLeft.y + cardRounding + tailHalfHeight, cardBottomRight.y - cardRounding - tailHalfHeight);
     const float tailBaseX = cardTopLeft.x + 2.0f;
-    const float tailBaseInsetY = std::clamp(cardSize.y * 0.05f, 2.0f, 6.0f);
-    ImVec2 tailPoly[3] = {
-        ImVec2(tailBaseX, tailCenterY - tailHalfHeight + tailBaseInsetY),
-        ImVec2(tailBaseX, tailCenterY + tailHalfHeight - tailBaseInsetY),
-        ImVec2(minimapZoomTargetX, minimapZoomTargetY)
+    const float tailShoulderX = cardTopLeft.x - std::clamp(cardSize.x * 0.09f, 18.0f, 34.0f);
+    ImVec2 tailPoly[4] = {
+        ImVec2(tailBaseX, tailCenterY - tailHalfHeight),
+        ImVec2(tailShoulderX, tailCenterY - tailHalfHeight * 0.55f),
+        ImVec2(minimapZoomTargetX, minimapZoomTargetY),
+        ImVec2(tailBaseX, tailCenterY + tailHalfHeight)
     };
-    draw->AddConvexPolyFilled(tailPoly, 3, bubbleFill);
-    draw->AddPolyline(tailPoly, 3, bubbleBorder, ImDrawFlags_Closed, 1.4f);
+    draw->AddConvexPolyFilled(tailPoly, 4, bubbleFill);
+    draw->AddPolyline(tailPoly, 4, bubbleBorder, ImDrawFlags_Closed, 1.6f);
 
     // Alert image (use raw icon color; no gradient tint so base64 image is not distorted).
     Icon alertIcon = MonsterAlertTexture(objectiveId);
