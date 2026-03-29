@@ -199,6 +199,8 @@ double get_m_AttkSpeed(void* thiz){
     return orig_get_m_AttkSpeed(thiz);
 }
 
+static inline void UpdateAutoRetribution();
+
 DefineHook(void, UpdateMapHack, (void * pThis)) {
     static time_t s_lastDebugLog = 0;
     static bool s_lastVisualState = false;
@@ -414,6 +416,7 @@ DefineHook(void, UpdateMapHack, (void * pThis)) {
              Config.Visual.MonsterIcon);
         s_lastDebugLog = now;
     }
+    UpdateAutoRetribution();
     oUpdateMapHack(pThis);
 }
 
@@ -558,11 +561,135 @@ static inline bool IsRetributionSpellReady(int selfGuid, uintptr_t localPlayerSh
     return coolDownData.spell <= 0;
 }
 
-static inline bool TryCastRetribution(uintptr_t localPlayerShow, int targetGuid) {
-    if (!localPlayerShow || !targetGuid) return false;
+struct RetriTargetEvalResult {
+    bool found = false;
+    int targetGuid = 0;
+    int targetId = 0;
+    int targetHp = 0;
+    float targetDistance = 0.0f;
+};
+
+static inline RetriTargetEvalResult EvaluateRetriTarget(uintptr_t battleManager, uintptr_t localPlayerShow) {
+    RetriTargetEvalResult result{};
+    if (!battleManager || !localPlayerShow) return result;
+
+    auto m_dicMonsterShow = *(Dictionary<int, uintptr_t> **) (battleManager + BattleManager_m_dicMonsterShow());
+    if (!m_dicMonsterShow) return result;
+
+    auto selfPos = *(Vector3 *) (localPlayerShow + ShowEntity__Position());
+    const int retriDamageCurrentLevel = GetRetributionDamageCurrentLevel(localPlayerShow);
+    constexpr float kRetributionRange = 6.0f;
+
+    for (int i = 0; i < m_dicMonsterShow->getNumKeys(); i++) {
+        auto values = m_dicMonsterShow->getValues()[i];
+        if (!values) continue;
+
+        auto m_bDeath = *(bool *) ((uintptr_t)values + EntityBase_m_bDeath());
+        if (m_bDeath) continue;
+
+        auto m_ID = *(int *) ((uintptr_t)values + EntityBase_m_ID());
+        auto new_mID = *(int *) ((uintptr_t)values + ShowEntity_m_id());
+        bool isWildMonster = *(bool *) ((uintptr_t)values + ShowEntity_IsWildMonster);
+        int jungleTypeId = bMonster(new_mID) ? new_mID : m_ID;
+        bool isJungleMonster = isWildMonster && bMonster(jungleTypeId);
+        if (!isJungleMonster) continue;
+        if (!IsSelectedAutoRetriMonster(jungleTypeId)) continue;
+
+        auto m_Hp = *(int *) ((uintptr_t)values + EntityBase_m_Hp());
+        auto _Position = *(Vector3 *) ((uintptr_t)values + ShowEntity__Position());
+        bool hpValid = m_Hp > 0;
+        bool posValid = _Position.x != 0.0f || _Position.y != 0.0f || _Position.z != 0.0f;
+        if (!hpValid || !posValid) continue;
+
+        float targetDistance = Vector3::Distance(selfPos, _Position);
+        bool inRange = targetDistance <= kRetributionRange;
+        bool lethal = m_Hp <= retriDamageCurrentLevel;
+        if (!inRange || !lethal) continue;
+
+        int targetGuid = *(int *) ((uintptr_t)values + EntityBase_m_uGuid());
+        if (!targetGuid) continue;
+
+        result.found = true;
+        result.targetGuid = targetGuid;
+        result.targetId = jungleTypeId;
+        result.targetHp = m_Hp;
+        result.targetDistance = targetDistance;
+        return result;
+    }
+
+    return result;
+}
+
+static inline bool TryCastRetribution(uintptr_t battleManager, uintptr_t localPlayerShow, int targetGuid) {
+    void *battleBridgeInstance = nullptr, *battleManagerInstance = nullptr;
+    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleData", "m_BattleBridge", &battleBridgeInstance);
+    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
+    if (!battleBridgeInstance || !battleManagerInstance || !battleManager || !localPlayerShow || !targetGuid) {
+        LOGI("[Debug][AutoRetri] cast-skip reason=invalid-context");
+        return false;
+    }
+
+    if (!AutoRetriHasRetributionSpell(localPlayerShow)) {
+        LOGI("[Debug][AutoRetri] cast-skip reason=no-retribution");
+        return false;
+    }
+
+    const bool localPlayerDead = *(bool *) (localPlayerShow + EntityBase_m_bDeath());
+    const bool localPlayerDisabled = get_InTransformation((void *)localPlayerShow);
+    if (localPlayerDead || localPlayerDisabled) {
+        LOGI("[Debug][AutoRetri] cast-skip reason=player-unavailable dead=%d disabled=%d", localPlayerDead, localPlayerDisabled);
+        return false;
+    }
+
+    const int selfGuid = *(int *) (localPlayerShow + EntityBase_m_uGuid());
+    if (!IsRetributionSpellReady(selfGuid, localPlayerShow)) {
+        LOGI("[Debug][AutoRetri] cast-skip reason=spell-cooldown");
+        return false;
+    }
+
+    RetriTargetEvalResult eval = EvaluateRetriTarget(battleManager, localPlayerShow);
+    if (!eval.found || eval.targetGuid != targetGuid) {
+        LOGI("[Debug][AutoRetri] cast-skip reason=target-invalid targetGuid=%d", targetGuid);
+        return false;
+    }
+
     int outState = 0;
-    // Best-effort skill invocation targeting spell slot + target guid.
-    return CallShowSelfPlayer_TryUseSkillOutState12((void *)localPlayerShow, &outState, 5, targetGuid, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    const bool casted = CallShowSelfPlayer_TryUseSkillOutState12((void *)localPlayerShow, &outState, 5, targetGuid, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    LOGI("[Debug][AutoRetri] cast-attempt targetGuid=%d targetId=%d hp=%d dist=%.2f result=%d outState=%d",
+         targetGuid, eval.targetId, eval.targetHp, eval.targetDistance, casted, outState);
+    return casted;
+}
+
+static inline void UpdateAutoRetribution() {
+    static int64_t s_lastAttemptTickMs = 0;
+    static int64_t s_lastCastTickMs = 0;
+    static constexpr int64_t kAttemptCooldownMs = 200;
+    static constexpr int64_t kPostCastLockMs = 400;
+
+    const int64_t nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+    if ((nowMs - s_lastAttemptTickMs) < kAttemptCooldownMs) return;
+    if ((nowMs - s_lastCastTickMs) < kPostCastLockMs) return;
+    s_lastAttemptTickMs = nowMs;
+
+    if (!Config.auto_menu.enable_retribution) return;
+    if (!AutoRetriIsInMatch()) return;
+
+    void *battleManagerInstance = nullptr;
+    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
+    if (!battleManagerInstance) return;
+
+    auto battleManager = (uintptr_t) battleManagerInstance;
+    auto m_LocalPlayerShow = *(uintptr_t *) (battleManager + BattleManager_m_LocalPlayerShow());
+    if (!m_LocalPlayerShow) return;
+
+    RetriTargetEvalResult eval = EvaluateRetriTarget(battleManager, m_LocalPlayerShow);
+    if (!eval.found) return;
+
+    const bool casted = TryCastRetribution(battleManager, m_LocalPlayerShow, eval.targetGuid);
+    if (casted) {
+        s_lastCastTickMs = nowMs;
+    }
 }
 
 static inline uint ResolveJungleCampType(int selfCampType, int entityCampType) {
@@ -847,21 +974,6 @@ void NewDrawESP(ImDrawList *draw, float screenWidth, float screenHeight) {
     /*monster*/
     auto m_dicMonsterShow = *(Dictionary<int, uintptr_t> **) ((uintptr_t)battleManager + BattleManager_m_dicMonsterShow());
     if (!m_dicMonsterShow) return;
-    static int64_t s_lastAutoRetributionTickMs = 0;
-    const int64_t nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count();
-    const bool autoRetriThrottleReady = (nowMs - s_lastAutoRetributionTickMs) >= 150;
-    const bool canProcessAutoRetri = Config.auto_menu.enable_retribution
-        && AutoRetriIsInMatch()
-        && AutoRetriHasRetributionSpell(m_LocalPlayerShow)
-        && autoRetriThrottleReady;
-    const bool localPlayerDead = *(bool *) ((uintptr_t)m_LocalPlayerShow + EntityBase_m_bDeath());
-    const bool localPlayerDisabled = get_InTransformation((void *)m_LocalPlayerShow);
-    const int selfGuid = *(int *) ((uintptr_t)m_LocalPlayerShow + EntityBase_m_uGuid());
-    const bool retriSpellReady = canProcessAutoRetri && !localPlayerDead && !localPlayerDisabled
-        && IsRetributionSpellReady(selfGuid, m_LocalPlayerShow);
-    const int retriDamageCurrentLevel = GetRetributionDamageCurrentLevel(m_LocalPlayerShow);
-    constexpr float kRetributionRange = 6.0f;
 
     for (int i = 0; i < m_dicMonsterShow->getNumKeys(); i++) {
         auto keys = m_dicMonsterShow->getKeys()[i];
@@ -886,21 +998,6 @@ void NewDrawESP(ImDrawList *draw, float screenWidth, float screenHeight) {
         if (isTower) continue;
         int jungleTypeId = bMonster(new_mID) ? new_mID : m_ID;
         bool isJungleMonster = isWildMonster && bMonster(jungleTypeId);
-
-        if (retriSpellReady && IsSelectedAutoRetriMonster(jungleTypeId)) {
-            bool hpValid = m_Hp > 0;
-            bool posValid = _Position.x != 0.0f || _Position.y != 0.0f || _Position.z != 0.0f;
-            float targetDistance = Vector3::Distance(selfPos, _Position);
-            bool inRange = targetDistance <= kRetributionRange;
-            bool lethal = m_Hp <= retriDamageCurrentLevel;
-            if (!m_bDeath && hpValid && posValid && inRange && lethal) {
-                int targetGuid = *(int *) ((uintptr_t)values + EntityBase_m_uGuid());
-                if (TryCastRetribution(m_LocalPlayerShow, targetGuid)) {
-                    s_lastAutoRetributionTickMs = nowMs;
-                    break;
-                }
-            }
-        }
 
         if (Config.MinimapIcon) {
             auto m_EntityCampType = *(int *) ((uintptr_t)values + EntityBase_m_EntityCampType());
