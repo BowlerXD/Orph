@@ -1,5 +1,6 @@
 //method
 #include <cstdint>
+#include <cstring>
 
 typedef unsigned long dword;
 
@@ -245,6 +246,105 @@ using ShowSelfPlayerTryUseSkillOutState12Fn = bool (*)(
         int arg7, int arg8, int arg9, int arg10, int arg11
 );
 
+struct TryUseSkillOutState12Args {
+    int p1;
+    uint64_t p2;
+    int p3;
+    int p4;
+    int p5;
+    int p6;
+    int p7;
+    int p8;
+    int p9;
+    int p10;
+    int p11;
+};
+
+inline ShowSelfPlayerTryUseSkillOutState12Fn g_ShowSelfPlayerTryUseSkillOutState12Orig = nullptr;
+inline bool g_AutoRetriTryUseSkillCallScope = false;
+inline bool g_ManualRetriSnapshotCaptured = false;
+inline TryUseSkillOutState12Args g_ManualRetriSnapshotArgs = {0};
+
+inline const char *TryUseSkillTargetModeLabel(const TryUseSkillOutState12Args &args) {
+    // Heuristic: non-zero target guid indicates entity-target cast.
+    if (args.p2 != 0) return "entity-target";
+    // p3..p5 often carry packed/quantized cast position in ground-target casts.
+    if (args.p3 != 0 || args.p4 != 0 || args.p5 != 0) return "ground-target";
+    return "unknown";
+}
+
+inline void LogTryUseSkillArgs(const char *tag, const TryUseSkillOutState12Args &args) {
+    LOGI("[TryUseSkill][%s] p1(slot)=%d p2(targetGuid)=%llu p3=%d p4=%d p5=%d p6=%d p7=%d p8=%d p9=%d p10=%d p11=%d targetMode=%s",
+         tag ? tag : "args",
+         args.p1,
+         (unsigned long long)args.p2,
+         args.p3, args.p4, args.p5, args.p6, args.p7, args.p8, args.p9, args.p10, args.p11,
+         TryUseSkillTargetModeLabel(args));
+}
+
+inline void CompareManualVsAutoTryUseSkillArgs(const TryUseSkillOutState12Args &manualArgs, const TryUseSkillOutState12Args &autoArgs) {
+    LOGI("[TryUseSkill][compare] targetGuid-match=%d manualGuid=%llu autoGuid=%llu",
+         manualArgs.p2 == autoArgs.p2,
+         (unsigned long long)manualArgs.p2,
+         (unsigned long long)autoArgs.p2);
+    LOGI("[TryUseSkill][compare] slot(manual=%d auto=%d) targetMode(manual=%s auto=%s)",
+         manualArgs.p1, autoArgs.p1,
+         TryUseSkillTargetModeLabel(manualArgs), TryUseSkillTargetModeLabel(autoArgs));
+
+    if (manualArgs.p1 != autoArgs.p1 || manualArgs.p2 != autoArgs.p2 ||
+        manualArgs.p3 != autoArgs.p3 || manualArgs.p4 != autoArgs.p4 || manualArgs.p5 != autoArgs.p5 ||
+        manualArgs.p6 != autoArgs.p6 || manualArgs.p7 != autoArgs.p7 || manualArgs.p8 != autoArgs.p8 ||
+        manualArgs.p9 != autoArgs.p9 || manualArgs.p10 != autoArgs.p10 || manualArgs.p11 != autoArgs.p11) {
+        LOGI("[TryUseSkill][compare] diff detected -> manual snapshot vs auto call are not identical.");
+    } else {
+        LOGI("[TryUseSkill][compare] args identical -> auto call already matches manual pattern.");
+    }
+}
+
+inline bool hShowSelfPlayer_TryUseSkillOutState12(
+        void *thiz,
+        int *outState,
+        int arg1, uint64_t arg2, int arg3, int arg4, int arg5, int arg6,
+        int arg7, int arg8, int arg9, int arg10, int arg11
+) {
+    const bool fromAutoRetri = g_AutoRetriTryUseSkillCallScope;
+    TryUseSkillOutState12Args currentArgs{arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11};
+
+    if (!fromAutoRetri && !g_ManualRetriSnapshotCaptured) {
+        g_ManualRetriSnapshotCaptured = true;
+        g_ManualRetriSnapshotArgs = currentArgs;
+        LogTryUseSkillArgs("manual-snapshot", g_ManualRetriSnapshotArgs);
+    } else if (fromAutoRetri) {
+        LogTryUseSkillArgs("auto-retri", currentArgs);
+        if (g_ManualRetriSnapshotCaptured && g_ManualRetriSnapshotArgs.p2 == currentArgs.p2) {
+            CompareManualVsAutoTryUseSkillArgs(g_ManualRetriSnapshotArgs, currentArgs);
+        }
+    }
+
+    if (g_ShowSelfPlayerTryUseSkillOutState12Orig) {
+        return g_ShowSelfPlayerTryUseSkillOutState12Orig(
+                thiz, outState, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11);
+    }
+
+    uintptr_t method = ResolveShowSelfPlayer_TryUseSkill();
+    if (!method) return false;
+    auto fn = reinterpret_cast<ShowSelfPlayerTryUseSkillOutState12Fn>(method);
+    if (!fn) return false;
+    return fn(thiz, outState, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11);
+}
+
+inline void InstallShowSelfPlayerTryUseSkillOutState12Hook() {
+    static bool installed = false;
+    if (installed) return;
+
+    uintptr_t method = ResolveShowSelfPlayer_TryUseSkill();
+    if (!method) return;
+
+    Tools::Hook((void *)method, (void *)hShowSelfPlayer_TryUseSkillOutState12, (void **)&g_ShowSelfPlayerTryUseSkillOutState12Orig);
+    installed = true;
+    LOGI("[TryUseSkill] hook installed for ShowSelfPlayer::TryUseSkill(out state, ...) at %p", (void *)method);
+}
+
 inline bool CallShowSelfPlayer_TryUseSkillOutState12(
         void *thiz,
         int *outState,
@@ -265,6 +365,19 @@ inline bool CallShowSelfPlayer_TryUseSkillOutState12(
         return false;
     }
     return fn(thiz, outState, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11);
+}
+
+inline bool CallShowSelfPlayer_TryUseSkillOutState12_AutoRetri(
+        void *thiz,
+        int *outState,
+        int arg1, uint64_t arg2, int arg3, int arg4, int arg5, int arg6,
+        int arg7, int arg8, int arg9, int arg10, int arg11
+) {
+    g_AutoRetriTryUseSkillCallScope = true;
+    const bool ok = CallShowSelfPlayer_TryUseSkillOutState12(
+            thiz, outState, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11);
+    g_AutoRetriTryUseSkillCallScope = false;
+    return ok;
 }
 
 #define ShowSelfPlayer_TryUseSkill2 ResolveShowSelfPlayer_TryUseSkill2()
