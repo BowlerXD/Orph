@@ -489,6 +489,23 @@ void DrawMenu() {
                     ImGui::Checkbox("Auto Retribution Serpent", &Config.auto_menu.retri_serpent);
                     ImGui::Checkbox("Auto Retribution Turtle", &Config.auto_menu.retri_turtle);
                     ImGui::Checkbox("Auto Retribution Lord", &Config.auto_menu.retri_lord);
+                    if (Config.auto_menu.enable_retribution) {
+                        void *battleManagerInstance = nullptr;
+                        Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
+                        uintptr_t localPlayerShow = 0;
+                        if (battleManagerInstance) {
+                            auto battleManager = (uintptr_t)battleManagerInstance;
+                            localPlayerShow = *(uintptr_t *)(battleManager + BattleManager_m_LocalPlayerShow());
+                        }
+                        if (localPlayerShow) {
+                            RuntimeBattleSpellInfo spellInfo = GetRuntimeBattleSpellInfo(localPlayerShow);
+                            if (!IsRetriPayloadReady(spellInfo)) {
+                                ImGui::TextDisabled("Auto Retri: Waiting manual payload calibration");
+                            }
+                        } else {
+                            ImGui::TextDisabled("Auto Retri: Waiting manual payload calibration");
+                        }
+                    }
                 }
                 ImGui::EndTabItem();
             }
