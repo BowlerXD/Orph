@@ -37,9 +37,9 @@ static inline void LOG_WRITE_FILE(const char *level, const char *fmt, ...) {
     fclose(fp);
 }
 
-#define LOGD(...) LOG_WRITE_FILE("D", __VA_ARGS__)
-#define LOGE(...) LOG_WRITE_FILE("E", __VA_ARGS__)
-#define LOGI(...) LOG_WRITE_FILE("I", __VA_ARGS__)
-#define LOGW(...) LOG_WRITE_FILE("W", __VA_ARGS__)
+#define LOGD(...) ((void)0)
+#define LOGE(...) ((void)0)
+#define LOGI(...) ((void)0)
+#define LOGW(...) ((void)0)
 
 #endif /* Logger_h */

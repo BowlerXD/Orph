@@ -334,16 +334,12 @@ void *main_thread(void *) {
 	DobbyInstrument(dlsym(RTLD_NEXT, "eglSwapBuffers"), eglSwapBuffers_handler);
 	
 	// Anti-cheat reporter hooks disabled to avoid loading-screen deadlock/stall.
-    void *battleManagerInstance = nullptr;
-    for (int wait = 0; wait < 120; ++wait) {
-        Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
-        if (battleManagerInstance) break;
-        sleep(1);
-    }
-
-    if (battleManagerInstance) {
-        Tools::Hook((void *) ShowEntity_OnUpdate, (void *) UpdateMapHack, (void **) &oUpdateMapHack);
+    uintptr_t showEntityOnUpdate = ShowEntity_OnUpdate;
+    if (showEntityOnUpdate) {
+        Tools::Hook((void *) showEntityOnUpdate, (void *) UpdateMapHack, (void **) &oUpdateMapHack);
+        LOGI("Hook installed: ShowEntity.OnUpdate -> UpdateMapHack (0x%lx)", (unsigned long)showEntityOnUpdate);
     } else {
+        LOGE("Hook skipped: ShowEntity.OnUpdate offset is 0");
     }
 	
     return 0;
