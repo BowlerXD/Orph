@@ -21,7 +21,7 @@ static const char *AntiAfkReasonToText(int reason) {
         case 2: return "SKIP: cooldown 60s";
         case 3: return "SKIP: no BattleManager";
         case 4: return "SKIP: no LocalPlayer";
-        case 5: return "SKIP: AI Control = false";
+        case 5: return "SKIP: AFK popup not shown";
         case 6: return "PULSE SENT";
         default: return "N/A";
     }
@@ -489,7 +489,7 @@ void DrawMenu() {
                 {
                     ImGui::Checkbox("Auto Resize", &bFlagAutoResize);
                     ImGui::Checkbox("Anti AFK (AI Control)", &Config.AntiAfkOnAIControl);
-                    ImGui::TextWrapped("Virtual anti-AFK aktif saat AI ambil kontrol: kirim pulse internal tiap 60 detik tanpa klik nyata.");
+                    ImGui::TextWrapped("Virtual anti-AFK aktif saat popup AFK muncul: kirim pulse internal tiap 60 detik tanpa klik nyata.");
                     ImGui::Separator();
                     ImGui::TextColored(RGBA2ImVec4(255, 210, 0, 255), "Anti AFK Debug (sementara)");
                     ImGui::Text("Tick calls: %llu", (unsigned long long)g_AntiAfkDebugTickCalls);
@@ -498,7 +498,7 @@ void DrawMenu() {
                     ImGui::Text("Skip cooldown (transition): %llu", (unsigned long long)g_AntiAfkDebugSkipCooldown);
                     ImGui::Text("Skip no BattleManager (transition): %llu", (unsigned long long)g_AntiAfkDebugSkipNoBattleManager);
                     ImGui::Text("Skip no LocalPlayer (transition): %llu", (unsigned long long)g_AntiAfkDebugSkipNoLocalPlayer);
-                    ImGui::Text("Skip AI control false (transition): %llu", (unsigned long long)g_AntiAfkDebugSkipAiControlOff);
+                    ImGui::Text("Skip AFK popup not shown (transition): %llu", (unsigned long long)g_AntiAfkDebugSkipAiControlOff);
                     ImGui::Text("Last reason: %s", AntiAfkReasonToText(g_AntiAfkDebugLastReason));
                     ImGui::Text("Last reason epoch(s): %llu", (unsigned long long)g_AntiAfkDebugLastReasonEpochSec);
                     ImGui::Text("Last pulse epoch(s): %llu", (unsigned long long)g_AntiAfkDebugLastPulseEpochSec);

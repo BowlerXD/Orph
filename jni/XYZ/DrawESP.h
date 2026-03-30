@@ -170,7 +170,7 @@ void _ShowPlayer_Unity_OnUpdate(void* thisz){
 	orig_ShowPlayer_Unity_OnUpdate(thisz);
 }
 
-static std::chrono::steady_clock::time_point g_LastAntiAfkPulse = std::chrono::steady_clock::now();
+static std::chrono::steady_clock::time_point g_LastAntiAfkPulse = std::chrono::steady_clock::time_point::min();
 enum AntiAfkDebugReason {
     ANTI_AFK_SKIP_NONE = 0,
     ANTI_AFK_SKIP_CONFIG_OR_NOT_MATCH = 1,
@@ -203,6 +203,7 @@ inline void ResetAntiAfkDebugCounters() {
     g_AntiAfkDebugLastPulseEpochSec = 0;
     g_AntiAfkDebugLastReasonEpochSec = 0;
     g_AntiAfkDebugLastReason = ANTI_AFK_SKIP_NONE;
+    g_LastAntiAfkPulse = std::chrono::steady_clock::time_point::min();
 }
 
 static inline void AntiAfkDebugSetReason(int reason, uint64_t nowSec) {
@@ -263,8 +264,26 @@ static inline void TickVirtualAntiAfk(bool inMatch) {
         return;
     }
 
-    auto aiControlOffset = ShowPlayer_m_bAiControl();
-    if (!aiControlOffset || !*(bool *)((uintptr_t)localPlayerShow + aiControlOffset)) {
+    void *showBattleSceneInstance = nullptr;
+    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "Battle", "ShowBattleScene", "Instance", &showBattleSceneInstance);
+    if (!showBattleSceneInstance) {
+        AntiAfkDebugSetReason(ANTI_AFK_SKIP_AI_CONTROL_OFF, nowSec);
+        return;
+    }
+
+    auto afkCompOffset = ShowBattleScene_m_AFKComp();
+    if (!afkCompOffset) {
+        AntiAfkDebugSetReason(ANTI_AFK_SKIP_AI_CONTROL_OFF, nowSec);
+        return;
+    }
+    auto afkComp = *(uintptr_t *)((uintptr_t)showBattleSceneInstance + afkCompOffset);
+    if (!afkComp) {
+        AntiAfkDebugSetReason(ANTI_AFK_SKIP_AI_CONTROL_OFF, nowSec);
+        return;
+    }
+
+    auto afkTipShowOffset = ShowAFKComp_m_bStayTooLongTipShow();
+    if (!afkTipShowOffset || !*(bool *)((uintptr_t)afkComp + afkTipShowOffset)) {
         AntiAfkDebugSetReason(ANTI_AFK_SKIP_AI_CONTROL_OFF, nowSec);
         return;
     }
