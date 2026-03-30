@@ -334,16 +334,36 @@ void *main_thread(void *) {
 	DobbyInstrument(dlsym(RTLD_NEXT, "eglSwapBuffers"), eglSwapBuffers_handler);
 	
 	// Anti-cheat reporter hooks disabled to avoid loading-screen deadlock/stall.
-    void *battleManagerInstance = nullptr;
-    for (int wait = 0; wait < 120; ++wait) {
-        Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
-        if (battleManagerInstance) break;
-        sleep(1);
+    uintptr_t showEntityOnUpdate = ShowEntity_OnUpdate;
+    if (showEntityOnUpdate) {
+        Tools::Hook((void *) showEntityOnUpdate, (void *) UpdateMapHack, (void **) &oUpdateMapHack);
+        LOGI("Hook installed: ShowEntity.OnUpdate -> UpdateMapHack (0x%lx)", (unsigned long)showEntityOnUpdate);
+    } else {
+        LOGE("Hook skipped: ShowEntity.OnUpdate offset is 0");
     }
 
-    if (battleManagerInstance) {
-        Tools::Hook((void *) ShowEntity_OnUpdate, (void *) UpdateMapHack, (void **) &oUpdateMapHack);
+    uintptr_t showPlayerOnUpdate = ShowPlayer_Unity_OnUpdate;
+    if (showPlayerOnUpdate) {
+        Tools::Hook((void *) showPlayerOnUpdate, (void *) _ShowPlayer_Unity_OnUpdate, (void **) &orig_ShowPlayer_Unity_OnUpdate);
+        LOGI("Hook installed: ShowPlayer.Unity_OnUpdate -> _ShowPlayer_Unity_OnUpdate (0x%lx)", (unsigned long)showPlayerOnUpdate);
     } else {
+        LOGE("Hook skipped: ShowPlayer.Unity_OnUpdate offset is 0");
+    }
+
+    uintptr_t setAiControl = ResolveBattleBridge_SetAIControl();
+    if (setAiControl) {
+        Tools::Hook((void *) setAiControl, (void *) _BattleBridge_SetAIControl, (void **) &orig_BattleBridge_SetAIControl);
+        LOGI("Hook installed: BattleBridge.SetAIControl (0x%lx)", (unsigned long)setAiControl);
+    } else {
+        LOGE("Hook skipped: BattleBridge.SetAIControl offset is 0");
+    }
+
+    uintptr_t ishowSetAiControl = ResolveBattleBridge_ISHOW_SetAIControl();
+    if (ishowSetAiControl) {
+        Tools::Hook((void *) ishowSetAiControl, (void *) _BattleBridge_ISHOW_SetAIControl, (void **) &orig_BattleBridge_ISHOW_SetAIControl);
+        LOGI("Hook installed: BattleBridge.ISHOW_SetAIControl (0x%lx)", (unsigned long)ishowSetAiControl);
+    } else {
+        LOGE("Hook skipped: BattleBridge.ISHOW_SetAIControl offset is 0");
     }
 	
     return 0;
