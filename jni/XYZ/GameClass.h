@@ -656,13 +656,43 @@ uintptr_t GetPlayerRealSelf() {
     return reinterpret_cast<uintptr_t(__fastcall *)(void *)>(LogicBattleManager_GetPlayerRealSelf())((void *)instance);
 }
 
+void *GetShowSelfPlayerInstance() {
+    void *battleManagerInstance = nullptr;
+    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
+
+    static uintptr_t showSelfPlayerOffset = 0;
+    if (!showSelfPlayerOffset) {
+        showSelfPlayerOffset = (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "BattleManager", "m_ShowSelfPlayer");
+        if (!showSelfPlayerOffset) {
+            showSelfPlayerOffset = (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "BattleManager", "m_showSelfPlayer");
+        }
+    }
+
+    if (battleManagerInstance && showSelfPlayerOffset) {
+        void *showSelfPlayer = *(void **)((uintptr_t) battleManagerInstance + showSelfPlayerOffset);
+        if (showSelfPlayer) {
+            return showSelfPlayer;
+        }
+    }
+
+    // Fallback kept for compatibility with older builds/dumps.
+    uintptr_t fallback = GetPlayerRealSelf();
+    return reinterpret_cast<void *>(fallback);
+}
+
 bool SetPlayerAIControl(bool showAfkInfo, int afkHeroId, uint32_t afkPlayerId, bool showAsk, uint32_t askEndTime) {
-    uintptr_t selfPlayer = GetPlayerRealSelf();
+    void *selfPlayer = GetShowSelfPlayerInstance();
     uintptr_t method = ResolveShowSelfPlayer_SetAIControl();
-    if (!selfPlayer || !method) return false;
+    if (!selfPlayer || !method) {
+        LOGE("SetPlayerAIControl failed: selfPlayer=%p method=0x%lx", selfPlayer, (unsigned long) method);
+        return false;
+    }
 
     auto fn = reinterpret_cast<void(__fastcall *)(void *, bool, int, uint32_t, bool, uint32_t)>(method);
-    fn(reinterpret_cast<void *>(selfPlayer), showAfkInfo, afkHeroId, afkPlayerId, showAsk, askEndTime);
+    LOGI("SetPlayerAIControl call: selfPlayer=%p showAfkInfo=%d afkHeroId=%d afkPlayerId=%u showAsk=%d askEndTime=%u",
+         selfPlayer, (int)showAfkInfo, afkHeroId, afkPlayerId, (int)showAsk, askEndTime);
+    fn(selfPlayer, showAfkInfo, afkHeroId, afkPlayerId, showAsk, askEndTime);
+    LOGI("SetPlayerAIControl done");
     return true;
 }
 
@@ -684,11 +714,14 @@ inline void QueuePlayerAIControl(bool showAfkInfo, int afkHeroId, uint32_t afkPl
     g_pendingAIControlRequest.afkPlayerId = afkPlayerId;
     g_pendingAIControlRequest.showAsk = showAsk;
     g_pendingAIControlRequest.askEndTime = askEndTime;
+    LOGI("QueuePlayerAIControl: showAfkInfo=%d afkHeroId=%d afkPlayerId=%u showAsk=%d askEndTime=%u",
+         (int)showAfkInfo, afkHeroId, afkPlayerId, (int)showAsk, askEndTime);
 }
 
 inline bool ProcessPendingPlayerAIControl() {
     if (!g_pendingAIControlRequest.pending) return false;
     g_pendingAIControlRequest.pending = false;
+    LOGI("ProcessPendingPlayerAIControl: applying queued request");
     return SetPlayerAIControl(
         g_pendingAIControlRequest.showAfkInfo,
         g_pendingAIControlRequest.afkHeroId,

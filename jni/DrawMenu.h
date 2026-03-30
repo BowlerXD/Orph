@@ -485,7 +485,7 @@ void DrawMenu() {
                         uint32_t targetUid = g_EnableAIControl ? static_cast<uint32_t>(playerUid) : 0u;
                         uint32_t askEndTime = g_EnableAIControl ? static_cast<uint32_t>(time(nullptr) + 120) : 0u;
                         QueuePlayerAIControl(g_EnableAIControl, heroId, targetUid, false, askEndTime);
-                        g_AiControlStatus = "AI control request queued.";
+                        g_AiControlStatus = "AI control request queued. Check /sdcard/Download/themaphack-debug.log";
                     }
 
                     ImGui::Spacing();
