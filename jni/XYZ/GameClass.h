@@ -781,7 +781,7 @@ inline void QueuePlayerAIControl(bool showAfkInfo, int afkHeroId, uint32_t afkPl
 inline void QueuePlayerAIControlEnableNow() {
     g_pendingAIControlRequest.pending = true;
     g_pendingAIControlRequest.resolveFromRuntime = true;
-    g_pendingAIControlRequest.showAfkInfo = true;
+    g_pendingAIControlRequest.showAfkInfo = false;
     g_pendingAIControlRequest.afkHeroId = 0;
     g_pendingAIControlRequest.afkPlayerId = 0;
     g_pendingAIControlRequest.showAsk = false;
@@ -811,11 +811,11 @@ inline bool ProcessPendingPlayerAIControl() {
             return false;
         }
 
-        g_pendingAIControlRequest.showAfkInfo = true;
+        g_pendingAIControlRequest.showAfkInfo = false;
         g_pendingAIControlRequest.afkHeroId = static_cast<int>(heroId);
         g_pendingAIControlRequest.afkPlayerId = afkPlayerId;
         g_pendingAIControlRequest.showAsk = false;
-        g_pendingAIControlRequest.askEndTime = static_cast<uint32_t>(time(nullptr) + 120);
+        g_pendingAIControlRequest.askEndTime = 0;
     }
 
     LOGI("ProcessPendingPlayerAIControl: applying queued request");
