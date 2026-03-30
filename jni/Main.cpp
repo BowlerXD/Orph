@@ -342,8 +342,15 @@ void *main_thread(void *) {
     }
 
     if (battleManagerInstance) {
-        Tools::Hook((void *) ShowEntity_OnUpdate, (void *) UpdateMapHack, (void **) &oUpdateMapHack);
+        uintptr_t showEntityOnUpdate = ShowEntity_OnUpdate;
+        if (showEntityOnUpdate) {
+            Tools::Hook((void *) showEntityOnUpdate, (void *) UpdateMapHack, (void **) &oUpdateMapHack);
+            LOGI("Hook installed: ShowEntity.OnUpdate -> UpdateMapHack (0x%lx)", (unsigned long)showEntityOnUpdate);
+        } else {
+            LOGE("Hook skipped: ShowEntity.OnUpdate offset is 0");
+        }
     } else {
+        LOGE("Hook skipped: BattleManager.Instance not ready");
     }
 	
     return 0;
