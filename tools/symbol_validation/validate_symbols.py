@@ -51,6 +51,21 @@ class SymbolResult:
         return base
 
 
+@dataclass(frozen=True)
+class SymbolSpec:
+    symbol_type: str
+    namespace: str
+    class_name: str
+    member_name: Optional[str]
+    expected_arg_counts: Optional[Set[int]]
+
+    @property
+    def expected_arg_count(self) -> Optional[int]:
+        if not self.expected_arg_counts:
+            return None
+        return min(self.expected_arg_counts)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Validate critical symbols against IL2CPP dump .cs")
     parser.add_argument("--dump", required=True, type=Path, help="Path to dump .cs file")
@@ -168,16 +183,14 @@ def parse_dump(dump_path: Path) -> Dict[str, ClassData]:
     return classes
 
 
-def load_critical_symbols(path: Path) -> List[dict]:
+def load_critical_symbols(path: Path) -> List[SymbolSpec]:
     data = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(data, list):
         raise ValueError("Critical symbols JSON must be a list")
-    for index, symbol in enumerate(data):
-        validate_symbol_definition(symbol, index)
-    return data
+    return [parse_symbol_definition(symbol, index) for index, symbol in enumerate(data)]
 
 
-def validate_symbol_definition(symbol: dict, index: int) -> None:
+def parse_symbol_definition(symbol: dict, index: int) -> SymbolSpec:
     if not isinstance(symbol, dict):
         raise ValueError(f"symbol at index {index} must be an object")
 
@@ -199,24 +212,35 @@ def validate_symbol_definition(symbol: dict, index: int) -> None:
         if not isinstance(symbol.get("name"), str) or not symbol["name"]:
             raise ValueError(f"{symbol_type} symbol at index {index} must include a non-empty 'name'")
 
+    expected_arg_counts = normalize_expected_arg_counts(symbol)
+    if symbol_type != "method" and expected_arg_counts is not None:
+        raise ValueError(f"{symbol_type} symbol at index {index} cannot define arg_count/arg_counts")
 
-def normalize_expected_arg_counts(symbol: dict) -> Tuple[Optional[int], Optional[Set[int]]]:
+    return SymbolSpec(
+        symbol_type=symbol_type,
+        namespace=namespace or "",
+        class_name=symbol["class"],
+        member_name=symbol.get("name"),
+        expected_arg_counts=expected_arg_counts,
+    )
+
+
+def normalize_expected_arg_counts(symbol: dict) -> Optional[Set[int]]:
     if "arg_counts" in symbol:
         counts = symbol["arg_counts"]
         if not isinstance(counts, list) or not counts or not all(isinstance(v, int) for v in counts):
             raise ValueError("method symbol arg_counts must be a non-empty list of ints")
-        unique = set(counts)
-        return min(unique), unique
+        return set(counts)
 
     arg_count = symbol.get("arg_count")
     if arg_count is None:
-        return None, None
+        return None
     if not isinstance(arg_count, int):
         raise ValueError("method symbol arg_count must be an int")
-    return arg_count, {arg_count}
+    return {arg_count}
 
 
-def evaluate_symbols(symbols: List[dict], classes: Dict[str, ClassData]) -> List[SymbolResult]:
+def evaluate_symbols(symbols: List[SymbolSpec], classes: Dict[str, ClassData]) -> List[SymbolResult]:
     results: List[SymbolResult] = []
     classes_by_name: Dict[str, List[str]] = {}
 
@@ -225,11 +249,11 @@ def evaluate_symbols(symbols: List[dict], classes: Dict[str, ClassData]) -> List
         classes_by_name.setdefault(class_name, []).append(fqcn)
 
     for symbol in symbols:
-        symbol_type = symbol["type"]
-        namespace = symbol.get("namespace", "")
-        class_name = symbol["class"]
-        member_name = symbol.get("name")
-        arg_count, expected_arg_counts = normalize_expected_arg_counts(symbol)
+        symbol_type = symbol.symbol_type
+        namespace = symbol.namespace
+        class_name = symbol.class_name
+        member_name = symbol.member_name
+        expected_arg_counts = symbol.expected_arg_counts
 
         fqcn = f"{namespace}.{class_name}".strip(".")
         class_data = classes.get(fqcn)
@@ -263,7 +287,7 @@ def evaluate_symbols(symbols: List[dict], classes: Dict[str, ClassData]) -> List
                     namespace,
                     class_name,
                     member_name,
-                    arg_count,
+                    symbol.expected_arg_count,
                     "MISSING",
                     class_lookup_note or "class not found in dump",
                 )
@@ -280,7 +304,17 @@ def evaluate_symbols(symbols: List[dict], classes: Dict[str, ClassData]) -> List
 
         if symbol_type == "method":
             status, notes = evaluate_method_symbol(member_name or "", class_data, expected_arg_counts)
-            results.append(SymbolResult(symbol_type, namespace, class_name, member_name, arg_count, status, notes))
+            results.append(
+                SymbolResult(
+                    symbol_type,
+                    namespace,
+                    class_name,
+                    member_name,
+                    symbol.expected_arg_count,
+                    status,
+                    notes,
+                )
+            )
             continue
 
         raise ValueError(f"Unknown symbol type: {symbol_type}")
