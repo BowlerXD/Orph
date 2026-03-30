@@ -170,6 +170,20 @@ void _ShowPlayer_Unity_OnUpdate(void* thisz){
 	orig_ShowPlayer_Unity_OnUpdate(thisz);
 }
 
+void (*orig_BattleBridge_SetAIControl)(void *thiz, bool showAfkInfo, int afkHeroId, uint32_t afkPlayerId, bool showAsk, uint32_t askEndTime);
+void _BattleBridge_SetAIControl(void *thiz, bool showAfkInfo, int afkHeroId, uint32_t afkPlayerId, bool showAsk, uint32_t askEndTime) {
+    LOGI("HOOK BattleBridge.SetAIControl thiz=%p showAfkInfo=%d afkHeroId=%d afkPlayerId=%u showAsk=%d askEndTime=%u",
+         thiz, (int)showAfkInfo, afkHeroId, afkPlayerId, (int)showAsk, askEndTime);
+    orig_BattleBridge_SetAIControl(thiz, showAfkInfo, afkHeroId, afkPlayerId, showAsk, askEndTime);
+}
+
+void (*orig_BattleBridge_ISHOW_SetAIControl)(void *thiz, bool showAfkInfo, bool showAsk, int afkHeroId, uint32_t afkPlayerId, uint32_t askEndTime);
+void _BattleBridge_ISHOW_SetAIControl(void *thiz, bool showAfkInfo, bool showAsk, int afkHeroId, uint32_t afkPlayerId, uint32_t askEndTime) {
+    LOGI("HOOK BattleBridge.ISHOW_SetAIControl thiz=%p showAfkInfo=%d showAsk=%d afkHeroId=%d afkPlayerId=%u askEndTime=%u",
+         thiz, (int)showAfkInfo, (int)showAsk, afkHeroId, afkPlayerId, askEndTime);
+    orig_BattleBridge_ISHOW_SetAIControl(thiz, showAfkInfo, showAsk, afkHeroId, afkPlayerId, askEndTime);
+}
+
 void (*oLogicPlayer_Update)(void* thisz, int status);
 void LogicPlayer_Update(void* thisz, int status){
 	if (thisz != NULL){
