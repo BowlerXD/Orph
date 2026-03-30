@@ -207,9 +207,9 @@ static inline void TickVirtualAntiAfk(bool inMatch) {
         auto *moveDir = reinterpret_cast<Vector3 *>((uintptr_t)localPlayerShow + moveDirOffset);
         if (moveDir) {
             const float axis = ((std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count() & 1) == 0) ? 0.02f : -0.02f;
-            moveDir->X = axis;
-            moveDir->Y = 0.0f;
-            moveDir->Z = 0.0f;
+            moveDir->x = axis;
+            moveDir->y = 0.0f;
+            moveDir->z = 0.0f;
         }
     }
 
