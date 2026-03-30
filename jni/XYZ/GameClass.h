@@ -787,7 +787,6 @@ inline void QueuePlayerAIControlEnableNow() {
     g_pendingAIControlRequest.showAsk = true;
     g_pendingAIControlRequest.askEndTime = 0;
     LOGI("QueuePlayerAIControlEnableNow: queued runtime-resolved AI control request");
-    DebugLogAIControlSnapshot("Queue");
 }
 
 inline bool ProcessPendingPlayerAIControl() {
@@ -808,7 +807,6 @@ inline bool ProcessPendingPlayerAIControl() {
         if (afkPlayerId == 0 || heroId == 0) {
             LOGE("ProcessPendingPlayerAIControl: runtime values not ready yet (playerUid=%llu playerGuid=%u heroId=%u), keeping request pending",
                  (unsigned long long)playerUid, playerGuid, heroId);
-            DebugLogAIControlSnapshot("PendingWait");
             return false;
         }
 
@@ -820,7 +818,6 @@ inline bool ProcessPendingPlayerAIControl() {
     }
 
     LOGI("ProcessPendingPlayerAIControl: applying queued request");
-    DebugLogAIControlSnapshot("BeforeApply");
     bool applied = SetPlayerAIControl(
         g_pendingAIControlRequest.showAfkInfo,
         g_pendingAIControlRequest.afkHeroId,
@@ -830,10 +827,8 @@ inline bool ProcessPendingPlayerAIControl() {
     );
     if (!applied) {
         LOGE("ProcessPendingPlayerAIControl: apply failed, keeping request pending");
-        DebugLogAIControlSnapshot("ApplyFailed");
         return false;
     }
-    DebugLogAIControlSnapshot("Applied");
     g_pendingAIControlRequest.pending = false;
     return true;
 }
