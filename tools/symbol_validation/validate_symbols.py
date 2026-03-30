@@ -14,16 +14,18 @@ from typing import Dict, List, Optional, Set, Tuple
 METHOD_DECL_RE = re.compile(
     r"^\s*(?:\[[^\]]+\]\s*)*(?:public|private|protected|internal)\s+"
     r"(?:static\s+|virtual\s+|override\s+|sealed\s+|extern\s+|unsafe\s+|new\s+|abstract\s+|partial\s+)*"
-    r"[\w<>,\[\]\.?\s]+\s+([A-Za-z_]\w*)\s*\(([^)]*)\)"
+    r"[\w<>,\[\]\.\?\s]+\s+([A-Za-z_]\w*)\s*\(([^)]*)\)"
 )
 
 FIELD_DECL_RE = re.compile(
     r"^\s*(?:\[[^\]]+\]\s*)*(?:public|private|protected|internal)\s+"
-    r"(?:static\s+|readonly\s+|const\s+|volatile\s+)*[\w<>,\[\]\.?\s]+\s+([A-Za-z_]\w*)\s*(?:=|;)"
+    r"(?:static\s+|readonly\s+|const\s+|volatile\s+)*[\w<>,\[\]\.\?\s]+\s+([A-Za-z_]\w*)\s*(?:=|;)"
 )
 
 CLASS_DECL_RE = re.compile(r"^\s*(?:public|private|internal|protected)?\s*(?:abstract\s+|sealed\s+|partial\s+)*class\s+([A-Za-z_]\w*)")
 NAMESPACE_COMMENT_RE = re.compile(r"^\s*//\s*Namespace:\s*(.*)$")
+VALID_SYMBOL_TYPES = {"class", "field", "method"}
+ISSUE_STATUSES = {"MISSING", "SIGNATURE_MISMATCH"}
 
 
 @dataclass
@@ -170,9 +172,32 @@ def load_critical_symbols(path: Path) -> List[dict]:
     data = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(data, list):
         raise ValueError("Critical symbols JSON must be a list")
+    for index, symbol in enumerate(data):
+        validate_symbol_definition(symbol, index)
     return data
 
 
+def validate_symbol_definition(symbol: dict, index: int) -> None:
+    if not isinstance(symbol, dict):
+        raise ValueError(f"symbol at index {index} must be an object")
+
+    symbol_type = symbol.get("type")
+    if symbol_type not in VALID_SYMBOL_TYPES:
+        raise ValueError(
+            f"symbol at index {index} has invalid type '{symbol_type}', "
+            f"expected one of {sorted(VALID_SYMBOL_TYPES)}"
+        )
+
+    if not isinstance(symbol.get("class"), str) or not symbol["class"]:
+        raise ValueError(f"symbol at index {index} must include a non-empty 'class'")
+
+    namespace = symbol.get("namespace", "")
+    if namespace is not None and not isinstance(namespace, str):
+        raise ValueError(f"symbol at index {index} has invalid 'namespace' (must be a string)")
+
+    if symbol_type in {"field", "method"}:
+        if not isinstance(symbol.get("name"), str) or not symbol["name"]:
+            raise ValueError(f"{symbol_type} symbol at index {index} must include a non-empty 'name'")
 
 
 def normalize_expected_arg_counts(symbol: dict) -> Tuple[Optional[int], Optional[Set[int]]]:
@@ -254,31 +279,36 @@ def evaluate_symbols(symbols: List[dict], classes: Dict[str, ClassData]) -> List
             continue
 
         if symbol_type == "method":
-            available = class_data.methods.get(member_name or "", set())
-            if not available:
-                status, notes = "MISSING", "method not found"
-            elif expected_arg_counts is None or (available & expected_arg_counts):
-                if expected_arg_counts is None:
-                    status, notes = "FOUND", "method found"
-                elif len(expected_arg_counts) == 1:
-                    matched = next(iter(available & expected_arg_counts))
-                    status, notes = "FOUND", f"matched arg_count={matched}"
-                else:
-                    expected = ", ".join(str(v) for v in sorted(expected_arg_counts))
-                    matched = ", ".join(str(v) for v in sorted(available & expected_arg_counts))
-                    status, notes = "FOUND", f"matched arg_count=[{matched}] from expected=[{expected}]"
-            else:
-                status = "SIGNATURE_MISMATCH"
-                counts = ", ".join(str(v) for v in sorted(available))
-                expected = ", ".join(str(v) for v in sorted(expected_arg_counts))
-                notes = f"expected arg_count=[{expected}], found arg_count=[{counts}]"
-
+            status, notes = evaluate_method_symbol(member_name or "", class_data, expected_arg_counts)
             results.append(SymbolResult(symbol_type, namespace, class_name, member_name, arg_count, status, notes))
             continue
 
         raise ValueError(f"Unknown symbol type: {symbol_type}")
 
     return results
+
+
+def evaluate_method_symbol(
+    member_name: str, class_data: ClassData, expected_arg_counts: Optional[Set[int]]
+) -> Tuple[str, str]:
+    available = class_data.methods.get(member_name, set())
+    if not available:
+        return "MISSING", "method not found"
+
+    if expected_arg_counts is None:
+        return "FOUND", "method found"
+
+    matched_counts = available & expected_arg_counts
+    if matched_counts:
+        if len(expected_arg_counts) == 1:
+            return "FOUND", f"matched arg_count={next(iter(matched_counts))}"
+        expected = ", ".join(str(v) for v in sorted(expected_arg_counts))
+        matched = ", ".join(str(v) for v in sorted(matched_counts))
+        return "FOUND", f"matched arg_count=[{matched}] from expected=[{expected}]"
+
+    counts = ", ".join(str(v) for v in sorted(available))
+    expected = ", ".join(str(v) for v in sorted(expected_arg_counts))
+    return "SIGNATURE_MISMATCH", f"expected arg_count=[{expected}], found arg_count=[{counts}]"
 
 
 def write_reports(results: List[SymbolResult], json_path: Path, txt_path: Path) -> None:
@@ -335,7 +365,7 @@ def main() -> int:
     results = evaluate_symbols(symbols, classes)
     write_reports(results, args.report_json, args.report_txt)
 
-    has_issues = any(r.status in {"MISSING", "SIGNATURE_MISMATCH"} for r in results)
+    has_issues = any(r.status in ISSUE_STATUSES for r in results)
     return 1 if has_issues and args.fail_on_issues else 0
 
 
