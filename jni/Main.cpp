@@ -341,34 +341,6 @@ void *main_thread(void *) {
     } else {
         LOGE("Hook skipped: ShowEntity.OnUpdate offset is 0");
     }
-
-    uintptr_t showPlayerOnUpdate = ShowPlayer_Unity_OnUpdate;
-    if (showPlayerOnUpdate) {
-        Tools::Hook((void *) showPlayerOnUpdate, (void *) _ShowPlayer_Unity_OnUpdate, (void **) &orig_ShowPlayer_Unity_OnUpdate);
-        LOGI("Hook installed: ShowPlayer.Unity_OnUpdate -> _ShowPlayer_Unity_OnUpdate (0x%lx)", (unsigned long)showPlayerOnUpdate);
-    } else {
-        LOGE("Hook skipped: ShowPlayer.Unity_OnUpdate offset is 0");
-    }
-
-    uintptr_t setAiControl = ResolveBattleBridge_SetAIControl();
-    if (setAiControl) {
-        Tools::Hook((void *) setAiControl, (void *) _BattleBridge_SetAIControl, (void **) &orig_BattleBridge_SetAIControl);
-        LOGI("Hook installed: BattleBridge.SetAIControl (0x%lx)", (unsigned long)setAiControl);
-    } else {
-        LOGE("Hook skipped: BattleBridge.SetAIControl offset is 0");
-    }
-
-    if (battleManagerInstance) {
-        uintptr_t showEntityOnUpdate = ShowEntity_OnUpdate;
-        if (showEntityOnUpdate) {
-            Tools::Hook((void *) showEntityOnUpdate, (void *) UpdateMapHack, (void **) &oUpdateMapHack);
-            LOGI("Hook installed: ShowEntity.OnUpdate -> UpdateMapHack (0x%lx)", (unsigned long)showEntityOnUpdate);
-        } else {
-            LOGE("Hook skipped: ShowEntity.OnUpdate offset is 0");
-        }
-    } else {
-        LOGE("Hook skipped: BattleManager.Instance not ready");
-    }
 	
     return 0;
 }
