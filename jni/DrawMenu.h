@@ -257,7 +257,6 @@ void Trinage_background()
 int selectedOption = 0;
 std::string cimodkey = "https://t0pgamemurah.xyz/freeKey";
 std::string xyzBuyKey = "https://t0pgamemurah.xyz/freeKey";
-bool g_EnableAIControl = false;
 std::string g_AiControlStatus = "AI control is idle.";
 
 void DrawMenu() {
@@ -470,22 +469,11 @@ void DrawMenu() {
             if (ImGui::BeginTabItem("AI")) {
                 ImGui::BeginGroupPanel("AI Control", ImVec2(-1.0f, 0.0f));
                 {
-                    ImGui::Checkbox("Enable AI Control", &g_EnableAIControl);
                     ImGui::TextWrapped("Klik Apply untuk paksa AI control aktif sekarang.");
 
                     if (ImGui::Button("Apply AI Control", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
-                        int playerUid = 0;
-                        uintptr_t uidOffset = SystemData_m_uiID();
-                        if (uidOffset) playerUid = *(int *)(uidOffset);
-
-                        int heroId = 0;
-                        uintptr_t heroOffset = RoomData_uiHeroIDChoose();
-                        if (heroOffset) heroId = *(int *)(heroOffset);
-
-                        uint32_t targetUid = g_EnableAIControl ? static_cast<uint32_t>(playerUid) : 0u;
-                        uint32_t askEndTime = g_EnableAIControl ? static_cast<uint32_t>(time(nullptr) + 120) : 0u;
-                        QueuePlayerAIControl(g_EnableAIControl, heroId, targetUid, false, askEndTime);
-                        g_AiControlStatus = "AI control request queued. Check /sdcard/Download/themaphack-debug.log";
+                        QueuePlayerAIControlEnableNow();
+                        g_AiControlStatus = "AI control request queued. Waiting runtime data...";
                     }
 
                     ImGui::Spacing();
