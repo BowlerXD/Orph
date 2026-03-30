@@ -170,18 +170,55 @@ void _ShowPlayer_Unity_OnUpdate(void* thisz){
 	orig_ShowPlayer_Unity_OnUpdate(thisz);
 }
 
-void (*orig_BattleBridge_SetAIControl)(void *thiz, bool showAfkInfo, int afkHeroId, uint32_t afkPlayerId, bool showAsk, uint32_t askEndTime);
-void _BattleBridge_SetAIControl(void *thiz, bool showAfkInfo, int afkHeroId, uint32_t afkPlayerId, bool showAsk, uint32_t askEndTime) {
-    LOGI("HOOK BattleBridge.SetAIControl thiz=%p showAfkInfo=%d afkHeroId=%d afkPlayerId=%u showAsk=%d askEndTime=%u",
-         thiz, (int)showAfkInfo, afkHeroId, afkPlayerId, (int)showAsk, askEndTime);
-    orig_BattleBridge_SetAIControl(thiz, showAfkInfo, afkHeroId, afkPlayerId, showAsk, askEndTime);
-}
+static std::chrono::steady_clock::time_point g_LastAntiAfkPulse = std::chrono::steady_clock::now();
 
-void (*orig_BattleBridge_ISHOW_SetAIControl)(void *thiz, bool showAfkInfo, bool showAsk, int afkHeroId, uint32_t afkPlayerId, uint32_t askEndTime);
-void _BattleBridge_ISHOW_SetAIControl(void *thiz, bool showAfkInfo, bool showAsk, int afkHeroId, uint32_t afkPlayerId, uint32_t askEndTime) {
-    LOGI("HOOK BattleBridge.ISHOW_SetAIControl thiz=%p showAfkInfo=%d showAsk=%d afkHeroId=%d afkPlayerId=%u askEndTime=%u",
-         thiz, (int)showAfkInfo, (int)showAsk, afkHeroId, afkPlayerId, askEndTime);
-    orig_BattleBridge_ISHOW_SetAIControl(thiz, showAfkInfo, showAsk, afkHeroId, afkPlayerId, askEndTime);
+using ShowSelfPlayerTryUseSkill9Fn = int (*)(void *, int, Vector3, bool, Vector3, bool, bool, bool, bool, uint32_t);
+
+static inline void TickVirtualAntiAfk(bool inMatch) {
+    if (!Config.AntiAfkOnAIControl || !inMatch) {
+        return;
+    }
+
+    auto now = std::chrono::steady_clock::now();
+    if (std::chrono::duration_cast<std::chrono::milliseconds>(now - g_LastAntiAfkPulse).count() < 60000) {
+        return;
+    }
+    g_LastAntiAfkPulse = now;
+
+    void *battleManagerInstance = nullptr;
+    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
+    if (!battleManagerInstance) {
+        return;
+    }
+
+    auto localPlayerShow = *(uintptr_t *) ((uintptr_t)battleManagerInstance + BattleManager_m_LocalPlayerShow());
+    if (!localPlayerShow) {
+        return;
+    }
+
+    auto aiControlOffset = ShowPlayer_m_bAiControl();
+    if (!aiControlOffset || !*(bool *)((uintptr_t)localPlayerShow + aiControlOffset)) {
+        return;
+    }
+
+    // Virtual analog pulse (very small) to keep AFK timer alive without visible joystick drag.
+    auto moveDirOffset = ShowEntity_MoveDir();
+    if (moveDirOffset) {
+        auto *moveDir = reinterpret_cast<Vector3 *>((uintptr_t)localPlayerShow + moveDirOffset);
+        if (moveDir) {
+            const float axis = ((std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count() & 1) == 0) ? 0.02f : -0.02f;
+            moveDir->x = axis;
+            moveDir->y = 0.0f;
+            moveDir->z = 0.0f;
+        }
+    }
+
+    // Virtual basic-attack/skill pulse via internal API (no real screen click).
+    uintptr_t tryUseSkill = ShowSelfPlayer_TryUseSkill2;
+    if (tryUseSkill) {
+        auto fn = reinterpret_cast<ShowSelfPlayerTryUseSkill9Fn>(tryUseSkill);
+        fn((void *)localPlayerShow, 0, Vector3::zero(), true, Vector3::zero(), true, false, false, true, 0);
+    }
 }
 
 void (*oLogicPlayer_Update)(void* thisz, int status);

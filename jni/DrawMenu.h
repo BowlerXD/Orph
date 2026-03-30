@@ -305,13 +305,13 @@ void DrawMenu() {
 	}
 	
     std::string FULLTITLE = std::string("TMH") + std::string(" | ") + clientManager.c_str() + std::string(" | ") + std::string(ABI);
+    ImGui::SetNextWindowSize(ImVec2((float) glWidth * 0.3f, (float) glHeight * 0.5f), ImGuiCond_Once); // 45% width 70% height
     if (!ImGui::Begin(FULLTITLE.c_str(), 0, window_flags)) {
         ImGui::End();
         return;
     }
 	
     using namespace ImGui;
-	ImGui::SetNextWindowSize(ImVec2((float) glWidth * 0.3f, (float) glHeight * 0.5f),ImGuiCond_Once); // 45% width 70% height
 	
 	// revjump bypass !isLogin to isLogin visual hack
 	if (!isLogin) {
@@ -471,6 +471,8 @@ void DrawMenu() {
                 ImGui::BeginGroupPanel("Menu Setting", ImVec2(-1.0f, 0.0f));
                 {
                     ImGui::Checkbox("Auto Resize", &bFlagAutoResize);
+                    ImGui::Checkbox("Anti AFK (AI Control)", &Config.AntiAfkOnAIControl);
+                    ImGui::TextWrapped("Virtual anti-AFK aktif saat AI ambil kontrol: kirim pulse internal tiap 60 detik tanpa klik nyata.");
                     ImGui::BeginGroupPanel("Window Size", ImVec2(-1.0f, 0.0f));
                     {
                         ImGui::PushItemWidth(-1);
@@ -542,6 +544,6 @@ void DrawMenu() {
 			ImGui::EndTabBar();
 		}
 		ImGui::Separator();
-        ImGui::TreePop();
 	}
+    ImGui::End();
 }
