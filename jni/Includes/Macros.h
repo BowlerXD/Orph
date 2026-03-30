@@ -52,16 +52,13 @@ void patchOffset(const char *fileName, uint64_t offset, std::string hexBytes, bo
     }
 
     if (!patch.isValid()) {
-        LOGE("Failing offset: 0x%llu, please re-check the hex", offset);
         return;
     }
     if (isOn) {
         if (!patch.Modify()) {
-            LOGE("Something went wrong while patching this offset: 0x%llu", offset);
         }
     } else {
         if (!patch.Restore()) {
-            LOGE("Something went wrong while restoring this offset: 0x%llu", offset);
         }
     }
 }
@@ -82,16 +79,13 @@ void patchOffsetSym(uintptr_t absolute_address, std::string hexBytes, bool isOn)
     }
 
     if (!patch.isValid()) {
-        LOGE("Failing offset: 0x%llu, please re-check the hex", absolute_address);
         return;
     }
     if (isOn) {
         if (!patch.Modify()) {
-            LOGE("Something went wrong while patching this offset: 0x%llu", absolute_address);
         }
     } else {
         if (!patch.Restore()) {
-            LOGE("Something went wrong while restoring this offset: 0x%llu", absolute_address);
         }
     }
 }
