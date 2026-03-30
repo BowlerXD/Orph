@@ -341,7 +341,7 @@ void *main_thread(void *) {
     } else {
         LOGE("Hook skipped: ShowEntity.OnUpdate offset is 0");
     }
-	
+
     return 0;
 }
 
