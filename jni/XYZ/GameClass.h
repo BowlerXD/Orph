@@ -207,9 +207,15 @@ inline uintptr_t ResolveShowSelfPlayer_TryUseSkill() {
     return method;
 }
 
-// dump: ShowSelfPlayer.SetAIControl(showAfkInfo, afkHeroId, afkPlayerId, showAsk, askEndTime) -> argCount 5
-inline uintptr_t ResolveShowSelfPlayer_SetAIControl() {
-    uintptr_t method = (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowSelfPlayer", "SetAIControl", 5);
+// dump: BattleBridge.SetAIControl(showAfkInfo, afkHeroId, afkPlayerId, showAsk, askEndTime) -> argCount 5
+inline uintptr_t ResolveBattleBridge_SetAIControl() {
+    uintptr_t method = (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "BattleBridge", "SetAIControl", 5);
+    return method;
+}
+
+// dump: BattleBridge.ISHOW_SetAIControl(showAfkInfo, showAsk, afkHeroId, afkPlayerId, askEndTime) -> argCount 5
+inline uintptr_t ResolveBattleBridge_ISHOW_SetAIControl() {
+    uintptr_t method = (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "BattleBridge", "ISHOW_SetAIControl", 5);
     return method;
 }
 
@@ -656,48 +662,101 @@ uintptr_t GetPlayerRealSelf() {
     return reinterpret_cast<uintptr_t(__fastcall *)(void *)>(LogicBattleManager_GetPlayerRealSelf())((void *)instance);
 }
 
-void *GetShowSelfPlayerInstance() {
+void *GetBattleBridgeInstance() {
+    void *battleBridgeInstance = nullptr;
+    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleData", "m_BattleBridge", &battleBridgeInstance);
+    return battleBridgeInstance;
+}
+
+uint32_t GetLocalPlayerHeroId() {
     void *battleManagerInstance = nullptr;
     Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
+    if (!battleManagerInstance) return 0;
 
-    static uintptr_t showSelfPlayerOffset = 0;
-    if (!showSelfPlayerOffset) {
-        showSelfPlayerOffset = (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "BattleManager", "m_ShowSelfPlayer");
-        if (!showSelfPlayerOffset) {
-            showSelfPlayerOffset = (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "BattleManager", "m_showSelfPlayer");
-        }
-    }
+    uintptr_t localPlayerOffset = BattleManager_m_LocalPlayerShow();
+    if (!localPlayerOffset) return 0;
 
-    if (battleManagerInstance && showSelfPlayerOffset) {
-        void *showSelfPlayer = *(void **)((uintptr_t) battleManagerInstance + showSelfPlayerOffset);
-        if (showSelfPlayer) {
-            return showSelfPlayer;
-        }
-    }
+    void *localPlayer = *(void **)((uintptr_t) battleManagerInstance + localPlayerOffset);
+    if (!localPlayer) return 0;
 
-    // Fallback kept for compatibility with older builds/dumps.
-    uintptr_t fallback = GetPlayerRealSelf();
-    return reinterpret_cast<void *>(fallback);
+    uintptr_t heroIdOffset = EntityBase_m_ID();
+    if (!heroIdOffset) return 0;
+
+    int heroId = *(int *)((uintptr_t)localPlayer + heroIdOffset);
+    return heroId > 0 ? static_cast<uint32_t>(heroId) : 0;
+}
+
+uint32_t GetLocalPlayerGuid() {
+    void *battleManagerInstance = nullptr;
+    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
+    if (!battleManagerInstance) return 0;
+
+    uintptr_t localPlayerOffset = BattleManager_m_LocalPlayerShow();
+    if (!localPlayerOffset) return 0;
+
+    void *localPlayer = *(void **)((uintptr_t) battleManagerInstance + localPlayerOffset);
+    if (!localPlayer) return 0;
+
+    uintptr_t guidOffset = EntityBase_m_uGuid();
+    if (!guidOffset) return 0;
+
+    uint32_t guid = *(uint32_t *)((uintptr_t)localPlayer + guidOffset);
+    return guid;
+}
+
+void DebugLogAIControlSnapshot(const char *stage) {
+    uint64_t playerUid = 0;
+    uint32_t heroIdChoose = 0;
+    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "SystemData", "m_uiID", &playerUid);
+    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "SystemData/RoomData", "uiHeroIDChoose", &heroIdChoose);
+
+    void *battleBridge = GetBattleBridgeInstance();
+    uintptr_t setMethod = ResolveBattleBridge_SetAIControl();
+    uintptr_t ishowMethod = ResolveBattleBridge_ISHOW_SetAIControl();
+    uint32_t localHeroId = GetLocalPlayerHeroId();
+    uint32_t localGuid = GetLocalPlayerGuid();
+
+    LOGI("AIControl[%s] bridge=%p setMethod=0x%lx ishowMethod=0x%lx m_uiID=%llu heroChoose=%u localHero=%u localGuid=%u",
+         stage,
+         battleBridge,
+         (unsigned long)setMethod,
+         (unsigned long)ishowMethod,
+         (unsigned long long)playerUid,
+         heroIdChoose,
+         localHeroId,
+         localGuid);
 }
 
 bool SetPlayerAIControl(bool showAfkInfo, int afkHeroId, uint32_t afkPlayerId, bool showAsk, uint32_t askEndTime) {
-    void *selfPlayer = GetShowSelfPlayerInstance();
-    uintptr_t method = ResolveShowSelfPlayer_SetAIControl();
-    if (!selfPlayer || !method) {
-        LOGE("SetPlayerAIControl failed: selfPlayer=%p method=0x%lx", selfPlayer, (unsigned long) method);
+    void *battleBridge = GetBattleBridgeInstance();
+    uintptr_t setMethod = ResolveBattleBridge_SetAIControl();
+    uintptr_t ishowMethod = ResolveBattleBridge_ISHOW_SetAIControl();
+    if (!battleBridge || (!setMethod && !ishowMethod)) {
+        LOGE("SetPlayerAIControl failed: battleBridge=%p setMethod=0x%lx ishowMethod=0x%lx",
+             battleBridge, (unsigned long)setMethod, (unsigned long)ishowMethod);
         return false;
     }
 
-    auto fn = reinterpret_cast<void(__fastcall *)(void *, bool, int, uint32_t, bool, uint32_t)>(method);
-    LOGI("SetPlayerAIControl call: selfPlayer=%p showAfkInfo=%d afkHeroId=%d afkPlayerId=%u showAsk=%d askEndTime=%u",
-         selfPlayer, (int)showAfkInfo, afkHeroId, afkPlayerId, (int)showAsk, askEndTime);
-    fn(selfPlayer, showAfkInfo, afkHeroId, afkPlayerId, showAsk, askEndTime);
+    LOGI("SetPlayerAIControl call: battleBridge=%p showAfkInfo=%d afkHeroId=%d afkPlayerId=%u showAsk=%d askEndTime=%u",
+         battleBridge, (int)showAfkInfo, afkHeroId, afkPlayerId, (int)showAsk, askEndTime);
+
+    if (ishowMethod) {
+        LOGI("SetPlayerAIControl -> calling ISHOW_SetAIControl");
+        auto fnIshow = reinterpret_cast<void(__fastcall *)(void *, bool, bool, int, uint32_t, uint32_t)>(ishowMethod);
+        fnIshow(battleBridge, showAfkInfo, showAsk, afkHeroId, afkPlayerId, askEndTime);
+    }
+    if (setMethod) {
+        LOGI("SetPlayerAIControl -> calling SetAIControl");
+        auto fnSet = reinterpret_cast<void(__fastcall *)(void *, bool, int, uint32_t, bool, uint32_t)>(setMethod);
+        fnSet(battleBridge, showAfkInfo, afkHeroId, afkPlayerId, showAsk, askEndTime);
+    }
     LOGI("SetPlayerAIControl done");
     return true;
 }
 
 struct PendingAIControlRequest {
     bool pending;
+    bool resolveFromRuntime;
     bool showAfkInfo;
     int afkHeroId;
     uint32_t afkPlayerId;
@@ -705,10 +764,11 @@ struct PendingAIControlRequest {
     uint32_t askEndTime;
 };
 
-static PendingAIControlRequest g_pendingAIControlRequest{false, false, 0, 0, false, 0};
+static PendingAIControlRequest g_pendingAIControlRequest{false, false, false, 0, 0, false, 0};
 
 inline void QueuePlayerAIControl(bool showAfkInfo, int afkHeroId, uint32_t afkPlayerId, bool showAsk, uint32_t askEndTime) {
     g_pendingAIControlRequest.pending = true;
+    g_pendingAIControlRequest.resolveFromRuntime = false;
     g_pendingAIControlRequest.showAfkInfo = showAfkInfo;
     g_pendingAIControlRequest.afkHeroId = afkHeroId;
     g_pendingAIControlRequest.afkPlayerId = afkPlayerId;
@@ -718,17 +778,60 @@ inline void QueuePlayerAIControl(bool showAfkInfo, int afkHeroId, uint32_t afkPl
          (int)showAfkInfo, afkHeroId, afkPlayerId, (int)showAsk, askEndTime);
 }
 
+inline void QueuePlayerAIControlEnableNow() {
+    g_pendingAIControlRequest.pending = true;
+    g_pendingAIControlRequest.resolveFromRuntime = true;
+    g_pendingAIControlRequest.showAfkInfo = true;
+    g_pendingAIControlRequest.afkHeroId = 0;
+    g_pendingAIControlRequest.afkPlayerId = 0;
+    g_pendingAIControlRequest.showAsk = false;
+    g_pendingAIControlRequest.askEndTime = 0;
+    LOGI("QueuePlayerAIControlEnableNow: queued runtime-resolved AI control request");
+}
+
 inline bool ProcessPendingPlayerAIControl() {
     if (!g_pendingAIControlRequest.pending) return false;
-    g_pendingAIControlRequest.pending = false;
+
+    if (g_pendingAIControlRequest.resolveFromRuntime) {
+        uint64_t playerUid = 0;
+        Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "SystemData", "m_uiID", &playerUid);
+
+        uint32_t afkPlayerId = 0;
+        if (playerUid > 0 && playerUid <= 0xFFFFFFFFULL) {
+            afkPlayerId = static_cast<uint32_t>(playerUid);
+        }
+        if (afkPlayerId == 0) {
+            afkPlayerId = GetLocalPlayerGuid();
+        }
+        uint32_t heroId = GetLocalPlayerHeroId();
+
+        if (afkPlayerId == 0 || heroId == 0) {
+            LOGE("ProcessPendingPlayerAIControl: runtime values not ready yet (playerUid=%llu afkPlayerId=%u heroId=%u), keeping request pending",
+                 (unsigned long long)playerUid, afkPlayerId, heroId);
+            return false;
+        }
+
+        g_pendingAIControlRequest.showAfkInfo = true;
+        g_pendingAIControlRequest.afkHeroId = static_cast<int>(heroId);
+        g_pendingAIControlRequest.afkPlayerId = afkPlayerId;
+        g_pendingAIControlRequest.showAsk = false;
+        g_pendingAIControlRequest.askEndTime = static_cast<uint32_t>(time(nullptr) + 120);
+    }
+
     LOGI("ProcessPendingPlayerAIControl: applying queued request");
-    return SetPlayerAIControl(
+    bool applied = SetPlayerAIControl(
         g_pendingAIControlRequest.showAfkInfo,
         g_pendingAIControlRequest.afkHeroId,
         g_pendingAIControlRequest.afkPlayerId,
         g_pendingAIControlRequest.showAsk,
         g_pendingAIControlRequest.askEndTime
     );
+    if (!applied) {
+        LOGE("ProcessPendingPlayerAIControl: apply failed, keeping request pending");
+        return false;
+    }
+    g_pendingAIControlRequest.pending = false;
+    return true;
 }
 
 Vector3 ShowEntity_get_Position(void *instance) {
