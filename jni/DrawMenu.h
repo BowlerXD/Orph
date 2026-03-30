@@ -2,6 +2,15 @@ bool showMenu = true;
 bool bFullChecked = false;
 int selectedFeatures = 1;
 android_app *i_App = 0;
+constexpr const char *kConfigPath = "/storage/emulated/0/Download/orph.ini";
+
+struct PersistedMaphackAdjustments {
+    ImVec2 startPos;
+    int mapSize;
+    int iconSize;
+    int healthThin;
+    float colorHealth[3];
+};
 
 unsigned int gpCrash = 0xfa91b9cd;
 static int crash(int randomval){
@@ -57,7 +66,7 @@ void HideMenu(bool& bShow) {
 }
 
 void loadConfig() {
-    int fd = open("/storage/emulated/0/Download/orph.ini", O_RDONLY);
+    int fd = open(kConfigPath, O_RDONLY);
     if (fd < 0) return;
 
     read(fd, &Config, sizeof(Config));
@@ -65,13 +74,7 @@ void loadConfig() {
     read(fd, &SetFieldOfView, sizeof(SetFieldOfView));
     read(fd, &sliderValue, sizeof(sliderValue));
 
-    struct PersistedMaphackAdjustments {
-        ImVec2 startPos;
-        int mapSize;
-        int iconSize;
-        int healthThin;
-        float colorHealth[3];
-    } persisted{};
+    PersistedMaphackAdjustments persisted{};
 
     ssize_t got = read(fd, &persisted, sizeof(persisted));
     if (got == (ssize_t) sizeof(persisted)) {
@@ -87,21 +90,16 @@ void loadConfig() {
     close(fd);
 }
 void saveConfig(){
-    int fd = open("/storage/emulated/0/Download/orph.ini", O_WRONLY | O_CREAT);
+    int fd = open(kConfigPath, O_WRONLY | O_CREAT);
     if (fd < 0) return;
-    system("chmod 777 /storage/emulated/0/Download/orph.ini");
+    std::string chmodCommand = std::string("chmod 777 ") + kConfigPath;
+    system(chmodCommand.c_str());
     write(fd, &Config , sizeof(Config));
     write(fd, &Aim, sizeof(Aim));
     write(fd, &SetFieldOfView, sizeof(SetFieldOfView));
     write(fd, &sliderValue, sizeof(sliderValue));
 
-    struct PersistedMaphackAdjustments {
-        ImVec2 startPos;
-        int mapSize;
-        int iconSize;
-        int healthThin;
-        float colorHealth[3];
-    } persisted{};
+    PersistedMaphackAdjustments persisted{};
 
     persisted.startPos = StartPos;
     persisted.mapSize = MapSize;
@@ -258,6 +256,10 @@ int selectedOption = 0;
 std::string cimodkey = "https://t0pgamemurah.xyz/freeKey";
 std::string xyzBuyKey = "https://t0pgamemurah.xyz/freeKey";
 
+inline bool ShouldShowGameplayTabs() {
+    return selectedFeatures == 1 || selectedFeatures == 2;
+}
+
 void DrawMenu() {
 	const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
 	ImVec2 center = ImGui::GetMainViewport()->GetCenter();
@@ -359,7 +361,7 @@ void DrawMenu() {
         }
     } else {
 		if (ImGui::BeginTabBar("Tab", ImGuiTabBarFlags_FittingPolicyScroll)) {
-			if (selectedFeatures == 1 | selectedFeatures == 2){
+			if (ShouldShowGameplayTabs()){
 				if (ImGui::BeginTabItem("ESP")) {
             	if (ImGui::CollapsingHeader("Player")) {
                 	if (ImGui::BeginTable("ESPPlayer", 3)) {
@@ -399,7 +401,7 @@ void DrawMenu() {
 	                ImGui::EndTabItem();
 				}
 				}
-			if (selectedFeatures == 1 | selectedFeatures == 2){
+			if (ShouldShowGameplayTabs()){
 				if (ImGui::BeginTabItem("Maphack")) {
 	                ImGui::Checkbox("Minimap Icon", &Config.MinimapIcon);
 	                if (!Config.MinimapIcon) ImGui::BeginDisabled();
