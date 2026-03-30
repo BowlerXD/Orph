@@ -686,6 +686,24 @@ uint32_t GetLocalPlayerHeroId() {
     return heroId > 0 ? static_cast<uint32_t>(heroId) : 0;
 }
 
+uint32_t GetLocalPlayerGuid() {
+    void *battleManagerInstance = nullptr;
+    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
+    if (!battleManagerInstance) return 0;
+
+    uintptr_t localPlayerOffset = BattleManager_m_LocalPlayerShow();
+    if (!localPlayerOffset) return 0;
+
+    void *localPlayer = *(void **)((uintptr_t) battleManagerInstance + localPlayerOffset);
+    if (!localPlayer) return 0;
+
+    uintptr_t guidOffset = EntityBase_m_uGuid();
+    if (!guidOffset) return 0;
+
+    uint32_t guid = *(uint32_t *)((uintptr_t)localPlayer + guidOffset);
+    return guid;
+}
+
 bool SetPlayerAIControl(bool showAfkInfo, int afkHeroId, uint32_t afkPlayerId, bool showAsk, uint32_t askEndTime) {
     void *battleBridge = GetBattleBridgeInstance();
     uintptr_t setMethod = ResolveBattleBridge_SetAIControl();
@@ -751,22 +769,25 @@ inline bool ProcessPendingPlayerAIControl() {
 
     if (g_pendingAIControlRequest.resolveFromRuntime) {
         uint64_t playerUid = 0;
+        uint32_t playerGuid = 0;
         uint32_t heroId = 0;
         Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "SystemData", "m_uiID", &playerUid);
+        playerGuid = GetLocalPlayerGuid();
         Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "SystemData/RoomData", "uiHeroIDChoose", &heroId);
         if (heroId == 0) {
             heroId = GetLocalPlayerHeroId();
         }
+        uint32_t afkPlayerId = playerGuid != 0 ? playerGuid : static_cast<uint32_t>(playerUid);
 
-        if (playerUid == 0 || playerUid > 0xFFFFFFFFULL || heroId == 0) {
-            LOGE("ProcessPendingPlayerAIControl: runtime values not ready yet (playerUid=%llu heroId=%u), keeping request pending",
-                 (unsigned long long)playerUid, heroId);
+        if (afkPlayerId == 0 || heroId == 0) {
+            LOGE("ProcessPendingPlayerAIControl: runtime values not ready yet (playerUid=%llu playerGuid=%u heroId=%u), keeping request pending",
+                 (unsigned long long)playerUid, playerGuid, heroId);
             return false;
         }
 
         g_pendingAIControlRequest.showAfkInfo = true;
         g_pendingAIControlRequest.afkHeroId = static_cast<int>(heroId);
-        g_pendingAIControlRequest.afkPlayerId = static_cast<uint32_t>(playerUid);
+        g_pendingAIControlRequest.afkPlayerId = afkPlayerId;
         g_pendingAIControlRequest.showAsk = true;
         g_pendingAIControlRequest.askEndTime = static_cast<uint32_t>(time(nullptr) + 120);
     }
