@@ -168,11 +168,26 @@ void _ShowEntity__OnUpdate(ShowEntity *showEntity) {
 void (*orig_ShowPlayer_Unity_OnUpdate)(void* thisz);
 void _ShowPlayer_Unity_OnUpdate(void* thisz){
 	if (thisz != NULL){
+		ProcessPendingPlayerAIControl();
 		*(int *) ((uintptr_t) thisz + ShowPlayer_m_QuadraKillTimes) = 1234;
 		*(int *) ((uintptr_t) thisz + ShowPlayer_m_PentaKillTimes) = 1234;
 		*(int *) ((uintptr_t) thisz + ShowPlayer_m_TripleKillTimes) = 1234;
 	}
 	orig_ShowPlayer_Unity_OnUpdate(thisz);
+}
+
+void (*orig_BattleBridge_SetAIControl)(void *thiz, bool showAfkInfo, int afkHeroId, uint32_t afkPlayerId, bool showAsk, uint32_t askEndTime);
+void _BattleBridge_SetAIControl(void *thiz, bool showAfkInfo, int afkHeroId, uint32_t afkPlayerId, bool showAsk, uint32_t askEndTime) {
+    LOGI("HOOK BattleBridge.SetAIControl thiz=%p showAfkInfo=%d afkHeroId=%d afkPlayerId=%u showAsk=%d askEndTime=%u",
+         thiz, (int)showAfkInfo, afkHeroId, afkPlayerId, (int)showAsk, askEndTime);
+    orig_BattleBridge_SetAIControl(thiz, showAfkInfo, afkHeroId, afkPlayerId, showAsk, askEndTime);
+}
+
+void (*orig_BattleBridge_ISHOW_SetAIControl)(void *thiz, bool showAfkInfo, bool showAsk, int afkHeroId, uint32_t afkPlayerId, uint32_t askEndTime);
+void _BattleBridge_ISHOW_SetAIControl(void *thiz, bool showAfkInfo, bool showAsk, int afkHeroId, uint32_t afkPlayerId, uint32_t askEndTime) {
+    LOGI("HOOK BattleBridge.ISHOW_SetAIControl thiz=%p showAfkInfo=%d showAsk=%d afkHeroId=%d afkPlayerId=%u askEndTime=%u",
+         thiz, (int)showAfkInfo, (int)showAsk, afkHeroId, afkPlayerId, askEndTime);
+    orig_BattleBridge_ISHOW_SetAIControl(thiz, showAfkInfo, showAsk, afkHeroId, afkPlayerId, askEndTime);
 }
 
 void (*oLogicPlayer_Update)(void* thisz, int status);
@@ -206,7 +221,6 @@ double get_m_AttkSpeed(void* thiz){
 
 
 DefineHook(void, UpdateMapHack, (void * pThis)) {
-    ProcessPendingPlayerAIControl();
     if (pThis != NULL) {
         void *BattleBridge_Instance = nullptr, *BattleManager_Instance = nullptr;
         Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleData", "m_BattleBridge", &BattleBridge_Instance);

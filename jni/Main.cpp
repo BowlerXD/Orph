@@ -343,6 +343,17 @@ void *main_thread(void *) {
 
     if (battleManagerInstance) {
         Tools::Hook((void *) ShowEntity_OnUpdate, (void *) UpdateMapHack, (void **) &oUpdateMapHack);
+        Tools::Hook((void *) ShowPlayer_Unity_OnUpdate, (void *) _ShowPlayer_Unity_OnUpdate, (void **) &orig_ShowPlayer_Unity_OnUpdate);
+
+        uintptr_t setAiControl = ResolveBattleBridge_SetAIControl();
+        if (setAiControl) {
+            Tools::Hook((void *) setAiControl, (void *) _BattleBridge_SetAIControl, (void **) &orig_BattleBridge_SetAIControl);
+        }
+
+        uintptr_t ishowSetAiControl = ResolveBattleBridge_ISHOW_SetAIControl();
+        if (ishowSetAiControl) {
+            Tools::Hook((void *) ishowSetAiControl, (void *) _BattleBridge_ISHOW_SetAIControl, (void **) &orig_BattleBridge_ISHOW_SetAIControl);
+        }
     } else {
     }
 	
