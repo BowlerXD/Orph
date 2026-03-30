@@ -516,6 +516,10 @@ uintptr_t ShowPlayer_m_iSummonSkillId(){
 uintptr_t ShowPlayer_m_HeroName(){
 	return (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "ShowPlayer", "m_HeroName");
 }
+
+uintptr_t ShowPlayer_m_bAiControl(){
+	return (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "ShowPlayer", "_bAiControl");
+}
 #define ShowPlayer_m_bInBattle (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "ShowPlayer", "m_bInBattle")
 #define ShowPlayer_Unity_OnUpdate (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowPlayer", "Unity_OnUpdate")
 #define ShowPlayer_m_QuadraKillTimes (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "ShowPlayer", "m_QuadraKillTimes")

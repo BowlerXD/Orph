@@ -471,6 +471,8 @@ void DrawMenu() {
                 ImGui::BeginGroupPanel("Menu Setting", ImVec2(-1.0f, 0.0f));
                 {
                     ImGui::Checkbox("Auto Resize", &bFlagAutoResize);
+                    ImGui::Checkbox("Anti AFK (AI Control)", &Config.AntiAfkOnAIControl);
+                    ImGui::TextWrapped("Virtual anti-AFK aktif saat AI ambil kontrol: kirim pulse internal tiap 60 detik tanpa klik nyata.");
                     ImGui::BeginGroupPanel("Window Size", ImVec2(-1.0f, 0.0f));
                     {
                         ImGui::PushItemWidth(-1);
