@@ -793,20 +793,12 @@ inline bool ProcessPendingPlayerAIControl() {
     if (!g_pendingAIControlRequest.pending) return false;
 
     if (g_pendingAIControlRequest.resolveFromRuntime) {
-        uint64_t playerUid = 0;
-        uint32_t playerGuid = 0;
-        uint32_t heroId = 0;
-        Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "SystemData", "m_uiID", &playerUid);
-        playerGuid = GetLocalPlayerGuid();
-        Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "SystemData/RoomData", "uiHeroIDChoose", &heroId);
-        if (heroId == 0) {
-            heroId = GetLocalPlayerHeroId();
-        }
-        uint32_t afkPlayerId = playerGuid != 0 ? playerGuid : static_cast<uint32_t>(playerUid);
+        uint32_t afkPlayerId = GetLocalPlayerGuid();
+        uint32_t heroId = GetLocalPlayerHeroId();
 
         if (afkPlayerId == 0 || heroId == 0) {
-            LOGE("ProcessPendingPlayerAIControl: runtime values not ready yet (playerUid=%llu playerGuid=%u heroId=%u), keeping request pending",
-                 (unsigned long long)playerUid, playerGuid, heroId);
+            LOGE("ProcessPendingPlayerAIControl: runtime values not ready yet (playerGuid=%u heroId=%u), keeping request pending",
+                 afkPlayerId, heroId);
             return false;
         }
 
