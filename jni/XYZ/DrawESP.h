@@ -168,6 +168,7 @@ void _ShowEntity__OnUpdate(ShowEntity *showEntity) {
 void (*orig_ShowPlayer_Unity_OnUpdate)(void* thisz);
 void _ShowPlayer_Unity_OnUpdate(void* thisz){
 	if (thisz != NULL){
+		ProcessPendingPlayerAIControl();
 		*(int *) ((uintptr_t) thisz + ShowPlayer_m_QuadraKillTimes) = 1234;
 		*(int *) ((uintptr_t) thisz + ShowPlayer_m_PentaKillTimes) = 1234;
 		*(int *) ((uintptr_t) thisz + ShowPlayer_m_TripleKillTimes) = 1234;
@@ -206,7 +207,6 @@ double get_m_AttkSpeed(void* thiz){
 
 
 DefineHook(void, UpdateMapHack, (void * pThis)) {
-    ProcessPendingPlayerAIControl();
     if (pThis != NULL) {
         void *BattleBridge_Instance = nullptr, *BattleManager_Instance = nullptr;
         Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleData", "m_BattleBridge", &BattleBridge_Instance);
