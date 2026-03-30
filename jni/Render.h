@@ -236,6 +236,7 @@ void Render()
     Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleData", "m_BattleBridge", &battleBridgeInstance);
     Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
     bFullChecked = IsSafeMatchRunning(battleBridgeInstance, battleManagerInstance);
+    TickVirtualAntiAfk(bFullChecked);
 
     if (bFullChecked) {
         if (!loggedEspEntry) {

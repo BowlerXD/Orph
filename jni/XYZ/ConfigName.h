@@ -413,6 +413,7 @@ struct sConfig {
     sVisual Visual{0};
 
     bool MinimapMonsterIcon;
+    bool AntiAfkOnAIControl;
 };
 sConfig Config{0};
 
