@@ -784,7 +784,7 @@ inline void QueuePlayerAIControlEnableNow() {
     g_pendingAIControlRequest.showAfkInfo = true;
     g_pendingAIControlRequest.afkHeroId = 0;
     g_pendingAIControlRequest.afkPlayerId = 0;
-    g_pendingAIControlRequest.showAsk = true;
+    g_pendingAIControlRequest.showAsk = false;
     g_pendingAIControlRequest.askEndTime = 0;
     LOGI("QueuePlayerAIControlEnableNow: queued runtime-resolved AI control request");
 }
@@ -793,19 +793,28 @@ inline bool ProcessPendingPlayerAIControl() {
     if (!g_pendingAIControlRequest.pending) return false;
 
     if (g_pendingAIControlRequest.resolveFromRuntime) {
-        uint32_t afkPlayerId = GetLocalPlayerGuid();
+        uint64_t playerUid = 0;
+        Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "SystemData", "m_uiID", &playerUid);
+
+        uint32_t afkPlayerId = 0;
+        if (playerUid > 0 && playerUid <= 0xFFFFFFFFULL) {
+            afkPlayerId = static_cast<uint32_t>(playerUid);
+        }
+        if (afkPlayerId == 0) {
+            afkPlayerId = GetLocalPlayerGuid();
+        }
         uint32_t heroId = GetLocalPlayerHeroId();
 
         if (afkPlayerId == 0 || heroId == 0) {
-            LOGE("ProcessPendingPlayerAIControl: runtime values not ready yet (playerGuid=%u heroId=%u), keeping request pending",
-                 afkPlayerId, heroId);
+            LOGE("ProcessPendingPlayerAIControl: runtime values not ready yet (playerUid=%llu afkPlayerId=%u heroId=%u), keeping request pending",
+                 (unsigned long long)playerUid, afkPlayerId, heroId);
             return false;
         }
 
         g_pendingAIControlRequest.showAfkInfo = true;
         g_pendingAIControlRequest.afkHeroId = static_cast<int>(heroId);
         g_pendingAIControlRequest.afkPlayerId = afkPlayerId;
-        g_pendingAIControlRequest.showAsk = true;
+        g_pendingAIControlRequest.showAsk = false;
         g_pendingAIControlRequest.askEndTime = static_cast<uint32_t>(time(nullptr) + 120);
     }
 
