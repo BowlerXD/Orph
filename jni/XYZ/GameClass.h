@@ -662,6 +662,24 @@ void *GetBattleBridgeInstance() {
     return battleBridgeInstance;
 }
 
+uint32_t GetLocalPlayerHeroId() {
+    void *battleManagerInstance = nullptr;
+    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
+    if (!battleManagerInstance) return 0;
+
+    uintptr_t localPlayerOffset = BattleManager_m_LocalPlayerShow();
+    if (!localPlayerOffset) return 0;
+
+    void *localPlayer = *(void **)((uintptr_t) battleManagerInstance + localPlayerOffset);
+    if (!localPlayer) return 0;
+
+    uintptr_t heroIdOffset = EntityBase_m_ID();
+    if (!heroIdOffset) return 0;
+
+    int heroId = *(int *)((uintptr_t)localPlayer + heroIdOffset);
+    return heroId > 0 ? static_cast<uint32_t>(heroId) : 0;
+}
+
 bool SetPlayerAIControl(bool showAfkInfo, int afkHeroId, uint32_t afkPlayerId, bool showAsk, uint32_t askEndTime) {
     void *battleBridge = GetBattleBridgeInstance();
     uintptr_t method = ResolveBattleBridge_SetAIControl();
@@ -721,6 +739,9 @@ inline bool ProcessPendingPlayerAIControl() {
         uint32_t heroId = 0;
         Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "SystemData", "m_uiID", &playerUid);
         Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "SystemData/RoomData", "uiHeroIDChoose", &heroId);
+        if (heroId == 0) {
+            heroId = GetLocalPlayerHeroId();
+        }
 
         if (playerUid == 0 || playerUid > 0xFFFFFFFFULL || heroId == 0) {
             LOGE("ProcessPendingPlayerAIControl: runtime values not ready yet (playerUid=%llu heroId=%u), keeping request pending",
@@ -735,15 +756,20 @@ inline bool ProcessPendingPlayerAIControl() {
         g_pendingAIControlRequest.askEndTime = static_cast<uint32_t>(time(nullptr) + 120);
     }
 
-    g_pendingAIControlRequest.pending = false;
     LOGI("ProcessPendingPlayerAIControl: applying queued request");
-    return SetPlayerAIControl(
+    bool applied = SetPlayerAIControl(
         g_pendingAIControlRequest.showAfkInfo,
         g_pendingAIControlRequest.afkHeroId,
         g_pendingAIControlRequest.afkPlayerId,
         g_pendingAIControlRequest.showAsk,
         g_pendingAIControlRequest.askEndTime
     );
+    if (!applied) {
+        LOGE("ProcessPendingPlayerAIControl: apply failed, keeping request pending");
+        return false;
+    }
+    g_pendingAIControlRequest.pending = false;
+    return true;
 }
 
 Vector3 ShowEntity_get_Position(void *instance) {
