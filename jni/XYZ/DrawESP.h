@@ -191,6 +191,8 @@ uint64_t g_AntiAfkDebugSkipAiControlOff = 0;
 uint64_t g_AntiAfkDebugLastPulseEpochSec = 0;
 uint64_t g_AntiAfkDebugLastReasonEpochSec = 0;
 int g_AntiAfkDebugLastReason = ANTI_AFK_SKIP_NONE;
+bool g_AntiAfkDebugInMatchNow = false;
+bool g_AntiAfkDebugPopupVisibleNow = false;
 
 inline void ResetAntiAfkDebugCounters() {
     g_AntiAfkDebugTickCalls = 0;
@@ -203,6 +205,8 @@ inline void ResetAntiAfkDebugCounters() {
     g_AntiAfkDebugLastPulseEpochSec = 0;
     g_AntiAfkDebugLastReasonEpochSec = 0;
     g_AntiAfkDebugLastReason = ANTI_AFK_SKIP_NONE;
+    g_AntiAfkDebugInMatchNow = false;
+    g_AntiAfkDebugPopupVisibleNow = false;
     g_LastAntiAfkPulse = std::chrono::steady_clock::time_point::min();
 }
 
@@ -237,9 +241,11 @@ using ShowSelfPlayerTryUseSkill9Fn = int (*)(void *, int, Vector3, bool, Vector3
 
 static inline void TickVirtualAntiAfk(bool inMatch) {
     g_AntiAfkDebugTickCalls++;
+    g_AntiAfkDebugInMatchNow = inMatch;
     uint64_t nowSec = (uint64_t)std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
 
     if (!Config.AntiAfkOnAIControl || !inMatch) {
+        g_AntiAfkDebugPopupVisibleNow = false;
         AntiAfkDebugSetReason(ANTI_AFK_SKIP_CONFIG_OR_NOT_MATCH, nowSec);
         return;
     }
@@ -249,7 +255,6 @@ static inline void TickVirtualAntiAfk(bool inMatch) {
         AntiAfkDebugSetReason(ANTI_AFK_SKIP_COOLDOWN, nowSec);
         return;
     }
-    g_LastAntiAfkPulse = now;
 
     void *battleManagerInstance = nullptr;
     Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
@@ -283,7 +288,9 @@ static inline void TickVirtualAntiAfk(bool inMatch) {
     }
 
     auto afkTipShowOffset = ShowAFKComp_m_bStayTooLongTipShow();
-    if (!afkTipShowOffset || !*(bool *)((uintptr_t)afkComp + afkTipShowOffset)) {
+    bool afkPopupVisibleNow = afkTipShowOffset && *(bool *)((uintptr_t)afkComp + afkTipShowOffset);
+    g_AntiAfkDebugPopupVisibleNow = afkPopupVisibleNow;
+    if (!afkPopupVisibleNow) {
         AntiAfkDebugSetReason(ANTI_AFK_SKIP_AI_CONTROL_OFF, nowSec);
         return;
     }
@@ -306,6 +313,7 @@ static inline void TickVirtualAntiAfk(bool inMatch) {
         auto fn = reinterpret_cast<ShowSelfPlayerTryUseSkill9Fn>(tryUseSkill);
         fn((void *)localPlayerShow, 0, Vector3::zero(), true, Vector3::zero(), true, false, false, true, 0);
     }
+    g_LastAntiAfkPulse = now;
     g_AntiAfkDebugPulseSent++;
     g_AntiAfkDebugLastReason = ANTI_AFK_PULSE_SENT;
     g_AntiAfkDebugLastPulseEpochSec = nowSec;

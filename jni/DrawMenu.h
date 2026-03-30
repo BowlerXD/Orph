@@ -13,6 +13,8 @@ extern uint64_t g_AntiAfkDebugSkipAiControlOff;
 extern uint64_t g_AntiAfkDebugLastPulseEpochSec;
 extern uint64_t g_AntiAfkDebugLastReasonEpochSec;
 extern int g_AntiAfkDebugLastReason;
+extern bool g_AntiAfkDebugInMatchNow;
+extern bool g_AntiAfkDebugPopupVisibleNow;
 void ResetAntiAfkDebugCounters();
 
 static const char *AntiAfkReasonToText(int reason) {
@@ -492,6 +494,8 @@ void DrawMenu() {
                     ImGui::TextWrapped("Virtual anti-AFK aktif saat popup AFK muncul: kirim pulse internal tiap 60 detik tanpa klik nyata.");
                     ImGui::Separator();
                     ImGui::TextColored(RGBA2ImVec4(255, 210, 0, 255), "Anti AFK Debug (sementara)");
+                    ImGui::Text("In match now: %s", g_AntiAfkDebugInMatchNow ? "YES" : "NO");
+                    ImGui::Text("AFK popup visible now: %s", g_AntiAfkDebugPopupVisibleNow ? "YES" : "NO");
                     ImGui::Text("Tick calls: %llu", (unsigned long long)g_AntiAfkDebugTickCalls);
                     ImGui::Text("Pulse sent: %llu", (unsigned long long)g_AntiAfkDebugPulseSent);
                     ImGui::Text("Skip cfg/not match (transition): %llu", (unsigned long long)g_AntiAfkDebugSkipConfigOrNotMatch);
