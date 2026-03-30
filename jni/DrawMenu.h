@@ -3,6 +3,28 @@ bool bFullChecked = false;
 int selectedFeatures = 1;
 android_app *i_App = 0;
 constexpr const char *kConfigPath = "/storage/emulated/0/Download/orph.ini";
+extern uint64_t g_AntiAfkDebugTickCalls;
+extern uint64_t g_AntiAfkDebugPulseSent;
+extern uint64_t g_AntiAfkDebugSkipConfigOrNotMatch;
+extern uint64_t g_AntiAfkDebugSkipCooldown;
+extern uint64_t g_AntiAfkDebugSkipNoBattleManager;
+extern uint64_t g_AntiAfkDebugSkipNoLocalPlayer;
+extern uint64_t g_AntiAfkDebugSkipAiControlOff;
+extern uint64_t g_AntiAfkDebugLastPulseEpochSec;
+extern int g_AntiAfkDebugLastReason;
+void ResetAntiAfkDebugCounters();
+
+static const char *AntiAfkReasonToText(int reason) {
+    switch (reason) {
+        case 1: return "SKIP: config off / not in match";
+        case 2: return "SKIP: cooldown 60s";
+        case 3: return "SKIP: no BattleManager";
+        case 4: return "SKIP: no LocalPlayer";
+        case 5: return "SKIP: AI Control = false";
+        case 6: return "PULSE SENT";
+        default: return "N/A";
+    }
+}
 
 struct PersistedMaphackAdjustments {
     ImVec2 startPos;
@@ -467,6 +489,20 @@ void DrawMenu() {
                     ImGui::Checkbox("Auto Resize", &bFlagAutoResize);
                     ImGui::Checkbox("Anti AFK (AI Control)", &Config.AntiAfkOnAIControl);
                     ImGui::TextWrapped("Virtual anti-AFK aktif saat AI ambil kontrol: kirim pulse internal tiap 60 detik tanpa klik nyata.");
+                    ImGui::Separator();
+                    ImGui::TextColored(RGBA2ImVec4(255, 210, 0, 255), "Anti AFK Debug (sementara)");
+                    ImGui::Text("Tick calls: %llu", (unsigned long long)g_AntiAfkDebugTickCalls);
+                    ImGui::Text("Pulse sent: %llu", (unsigned long long)g_AntiAfkDebugPulseSent);
+                    ImGui::Text("Skip cfg/not match: %llu", (unsigned long long)g_AntiAfkDebugSkipConfigOrNotMatch);
+                    ImGui::Text("Skip cooldown: %llu", (unsigned long long)g_AntiAfkDebugSkipCooldown);
+                    ImGui::Text("Skip no BattleManager: %llu", (unsigned long long)g_AntiAfkDebugSkipNoBattleManager);
+                    ImGui::Text("Skip no LocalPlayer: %llu", (unsigned long long)g_AntiAfkDebugSkipNoLocalPlayer);
+                    ImGui::Text("Skip AI control false: %llu", (unsigned long long)g_AntiAfkDebugSkipAiControlOff);
+                    ImGui::Text("Last reason: %s", AntiAfkReasonToText(g_AntiAfkDebugLastReason));
+                    ImGui::Text("Last pulse epoch(s): %llu", (unsigned long long)g_AntiAfkDebugLastPulseEpochSec);
+                    if (ImGui::Button("Reset Anti AFK Debug Counter", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
+                        ResetAntiAfkDebugCounters();
+                    }
                     ImGui::BeginGroupPanel("Window Size", ImVec2(-1.0f, 0.0f));
                     {
                         ImGui::PushItemWidth(-1);
