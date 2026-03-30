@@ -207,9 +207,9 @@ inline uintptr_t ResolveShowSelfPlayer_TryUseSkill() {
     return method;
 }
 
-// dump: ShowSelfPlayer.SetAIControl(showAfkInfo, afkHeroId, afkPlayerId, showAsk, askEndTime) -> argCount 5
-inline uintptr_t ResolveShowSelfPlayer_SetAIControl() {
-    uintptr_t method = (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowSelfPlayer", "SetAIControl", 5);
+// dump: BattleBridge.SetAIControl(showAfkInfo, afkHeroId, afkPlayerId, showAsk, askEndTime) -> argCount 5
+inline uintptr_t ResolveBattleBridge_SetAIControl() {
+    uintptr_t method = (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "BattleBridge", "SetAIControl", 5);
     return method;
 }
 
@@ -656,53 +656,24 @@ uintptr_t GetPlayerRealSelf() {
     return reinterpret_cast<uintptr_t(__fastcall *)(void *)>(LogicBattleManager_GetPlayerRealSelf())((void *)instance);
 }
 
-void *GetShowSelfPlayerInstance() {
-    void *battleManagerInstance = nullptr;
-    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
-    if (!battleManagerInstance) {
-        return nullptr;
-    }
-
-    static uintptr_t localPlayerShowOffset = 0;
-    if (!localPlayerShowOffset) {
-        localPlayerShowOffset = BattleManager_m_LocalPlayerShow();
-    }
-    if (localPlayerShowOffset) {
-        void *localPlayerShow = *(void **)((uintptr_t) battleManagerInstance + localPlayerShowOffset);
-        if (localPlayerShow) {
-            return localPlayerShow;
-        }
-    }
-
-    static uintptr_t showSelfPlayerOffset = 0;
-    if (!showSelfPlayerOffset) {
-        showSelfPlayerOffset = (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "BattleManager", "m_ShowSelfPlayer");
-        if (!showSelfPlayerOffset) {
-            showSelfPlayerOffset = (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "BattleManager", "m_showSelfPlayer");
-        }
-    }
-
-    if (battleManagerInstance && showSelfPlayerOffset) {
-        void *showSelfPlayer = *(void **)((uintptr_t) battleManagerInstance + showSelfPlayerOffset);
-        if (showSelfPlayer) {
-            return showSelfPlayer;
-        }
-    }
-    return nullptr;
+void *GetBattleBridgeInstance() {
+    void *battleBridgeInstance = nullptr;
+    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleData", "m_BattleBridge", &battleBridgeInstance);
+    return battleBridgeInstance;
 }
 
 bool SetPlayerAIControl(bool showAfkInfo, int afkHeroId, uint32_t afkPlayerId, bool showAsk, uint32_t askEndTime) {
-    void *selfPlayer = GetShowSelfPlayerInstance();
-    uintptr_t method = ResolveShowSelfPlayer_SetAIControl();
-    if (!selfPlayer || !method) {
-        LOGE("SetPlayerAIControl failed: selfPlayer=%p method=0x%lx", selfPlayer, (unsigned long) method);
+    void *battleBridge = GetBattleBridgeInstance();
+    uintptr_t method = ResolveBattleBridge_SetAIControl();
+    if (!battleBridge || !method) {
+        LOGE("SetPlayerAIControl failed: battleBridge=%p method=0x%lx", battleBridge, (unsigned long) method);
         return false;
     }
 
     auto fn = reinterpret_cast<void(__fastcall *)(void *, bool, int, uint32_t, bool, uint32_t)>(method);
-    LOGI("SetPlayerAIControl call: selfPlayer=%p showAfkInfo=%d afkHeroId=%d afkPlayerId=%u showAsk=%d askEndTime=%u",
-         selfPlayer, (int)showAfkInfo, afkHeroId, afkPlayerId, (int)showAsk, askEndTime);
-    fn(selfPlayer, showAfkInfo, afkHeroId, afkPlayerId, showAsk, askEndTime);
+    LOGI("SetPlayerAIControl call: battleBridge=%p showAfkInfo=%d afkHeroId=%d afkPlayerId=%u showAsk=%d askEndTime=%u",
+         battleBridge, (int)showAfkInfo, afkHeroId, afkPlayerId, (int)showAsk, askEndTime);
+    fn(battleBridge, showAfkInfo, afkHeroId, afkPlayerId, showAsk, askEndTime);
     LOGI("SetPlayerAIControl done");
     return true;
 }
