@@ -358,12 +358,16 @@ void *main_thread(void *) {
         LOGE("Hook skipped: BattleBridge.SetAIControl offset is 0");
     }
 
-    uintptr_t ishowSetAiControl = ResolveBattleBridge_ISHOW_SetAIControl();
-    if (ishowSetAiControl) {
-        Tools::Hook((void *) ishowSetAiControl, (void *) _BattleBridge_ISHOW_SetAIControl, (void **) &orig_BattleBridge_ISHOW_SetAIControl);
-        LOGI("Hook installed: BattleBridge.ISHOW_SetAIControl (0x%lx)", (unsigned long)ishowSetAiControl);
+    if (battleManagerInstance) {
+        uintptr_t showEntityOnUpdate = ShowEntity_OnUpdate;
+        if (showEntityOnUpdate) {
+            Tools::Hook((void *) showEntityOnUpdate, (void *) UpdateMapHack, (void **) &oUpdateMapHack);
+            LOGI("Hook installed: ShowEntity.OnUpdate -> UpdateMapHack (0x%lx)", (unsigned long)showEntityOnUpdate);
+        } else {
+            LOGE("Hook skipped: ShowEntity.OnUpdate offset is 0");
+        }
     } else {
-        LOGE("Hook skipped: BattleBridge.ISHOW_SetAIControl offset is 0");
+        LOGE("Hook skipped: BattleManager.Instance not ready");
     }
 	
     return 0;

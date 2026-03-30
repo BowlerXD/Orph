@@ -167,9 +167,6 @@ void _ShowEntity__OnUpdate(ShowEntity *showEntity) {
 
 void (*orig_ShowPlayer_Unity_OnUpdate)(void* thisz);
 void _ShowPlayer_Unity_OnUpdate(void* thisz){
-	if (thisz != NULL){
-		ProcessPendingPlayerAIControl();
-	}
 	orig_ShowPlayer_Unity_OnUpdate(thisz);
 }
 

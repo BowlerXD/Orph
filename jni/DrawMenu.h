@@ -257,7 +257,6 @@ void Trinage_background()
 int selectedOption = 0;
 std::string cimodkey = "https://t0pgamemurah.xyz/freeKey";
 std::string xyzBuyKey = "https://t0pgamemurah.xyz/freeKey";
-std::string g_AiControlStatus = "AI control is idle.";
 
 void DrawMenu() {
 	const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
@@ -466,23 +465,6 @@ void DrawMenu() {
                 ImGui::EndTabItem();
             }
 			}
-            if (ImGui::BeginTabItem("AI")) {
-                ImGui::BeginGroupPanel("AI Control", ImVec2(-1.0f, 0.0f));
-                {
-                    ImGui::TextWrapped("Klik Apply untuk paksa AI control aktif sekarang.");
-
-                    if (ImGui::Button("Apply AI Control", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
-                        QueuePlayerAIControlEnableNow();
-                        g_AiControlStatus = "AI control request queued. Waiting runtime data...";
-                    }
-
-                    ImGui::Spacing();
-                    ImGui::TextWrapped("%s", g_AiControlStatus.c_str());
-                }
-                ImGui::EndGroupPanel();
-                ImGui::EndTabItem();
-            }
-
 				static int SelectInfo = 0;
             static ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV;
             if (ImGui::BeginTabItem("Setting")) {
