@@ -12,16 +12,6 @@ struct PersistedMaphackAdjustments {
     float colorHealth[3];
 };
 
-unsigned int gpCrash = 0xfa91b9cd;
-static int crash(int randomval){
-    volatile int *p = (int *)gpCrash;
-    p += randomval;
-    p += *p + randomval;
-    p = 0;
-    p += *p;
-    return *p;
-}
-
 void CenteredText(ImColor color, const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
@@ -69,10 +59,22 @@ void loadConfig() {
     int fd = open(kConfigPath, O_RDONLY);
     if (fd < 0) return;
 
-    read(fd, &Config, sizeof(Config));
-    read(fd, &Aim, sizeof(Aim));
-    read(fd, &SetFieldOfView, sizeof(SetFieldOfView));
-    read(fd, &sliderValue, sizeof(sliderValue));
+    if (read(fd, &Config, sizeof(Config)) != (ssize_t)sizeof(Config)) {
+        close(fd);
+        return;
+    }
+    if (read(fd, &Aim, sizeof(Aim)) != (ssize_t)sizeof(Aim)) {
+        close(fd);
+        return;
+    }
+    if (read(fd, &SetFieldOfView, sizeof(SetFieldOfView)) != (ssize_t)sizeof(SetFieldOfView)) {
+        close(fd);
+        return;
+    }
+    if (read(fd, &sliderValue, sizeof(sliderValue)) != (ssize_t)sizeof(sliderValue)) {
+        close(fd);
+        return;
+    }
 
     PersistedMaphackAdjustments persisted{};
 
@@ -90,10 +92,9 @@ void loadConfig() {
     close(fd);
 }
 void saveConfig(){
-    int fd = open(kConfigPath, O_WRONLY | O_CREAT);
+    int fd = open(kConfigPath, O_WRONLY | O_CREAT | O_TRUNC, 0600);
     if (fd < 0) return;
-    std::string chmodCommand = std::string("chmod 777 ") + kConfigPath;
-    system(chmodCommand.c_str());
+
     write(fd, &Config , sizeof(Config));
     write(fd, &Aim, sizeof(Aim));
     write(fd, &SetFieldOfView, sizeof(SetFieldOfView));
@@ -130,12 +131,6 @@ std::string msg;
 
 void LoginThread(const std::string &user_key, bool *success) {
     msg = Login(g_vm, user_key.c_str(), success);
-}
-
-bool selectedThemes;
-
-static inline bool IsInMatch() {
-    return bFullChecked;
 }
 
 inline ImColor main_color(230, 134, 224, 255);
@@ -252,9 +247,14 @@ void Trinage_background()
         ImRotateEnd(partile_rotate[i]);
     }
 }
-int selectedOption = 0;
-std::string cimodkey = "https://t0pgamemurah.xyz/freeKey";
 std::string xyzBuyKey = "https://t0pgamemurah.xyz/freeKey";
+
+template <size_t N>
+inline void SafeCopyToCharBuffer(char (&dst)[N], const std::string &src) {
+    if (N == 0) return;
+    strncpy(dst, src.c_str(), N - 1);
+    dst[N - 1] = '\0';
+}
 
 inline bool ShouldShowGameplayTabs() {
     return selectedFeatures == 1 || selectedFeatures == 2;
@@ -273,7 +273,7 @@ void DrawMenu() {
     io.FontGlobalScale = window_scale;
 
     static bool isLogin = false, isSave = false;
-    static char s[64];
+    static char s[64] = {};
     if (isLogin && !isSave) {
         SharedPreferences sharedPref(GetJNIEnv(g_vm), "xyourzone_sharedpref");
         SharedPreferences_Editor editor=sharedPref.edit();
@@ -298,14 +298,6 @@ void DrawMenu() {
         bFullChecked = true;
     }
 	
-	std::string XYOURZONE;
-    
-	if (inVip == "100"){
-		XYOURZONE = std::string("VIP VERSION ");
-	} else {
-		XYOURZONE = std::string("FREE VERSION ");
-	}
-	
     std::string FULLTITLE = std::string("TMH") + std::string(" | ") + clientManager.c_str() + std::string(" | ") + std::string(ABI);
     ImGui::SetNextWindowSize(ImVec2((float) glWidth * 0.3f, (float) glHeight * 0.5f), ImGuiCond_Once); // 45% width 70% height
     if (!ImGui::Begin(FULLTITLE.c_str(), 0, window_flags)) {
@@ -329,7 +321,7 @@ void DrawMenu() {
 					
                     if (ImGui::Button("Paste Key", ImVec2(ImGui::GetContentRegionAvail().x / 2, 0))) {
                         auto key = getClipboardText(g_vm);
-                        strncpy(s, key.c_str(), sizeof s);
+                        SafeCopyToCharBuffer(s, key);
                     }
 
                     ImGui::SameLine();
@@ -338,7 +330,7 @@ void DrawMenu() {
                     if (ImGui::Button("Load Saved Key", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
                         SharedPreferences sharedPref(GetJNIEnv(g_vm), "xyourzone_sharedpref");
                         auto key = sharedPref.getString("key");
-                        strncpy(s, key.c_str(), sizeof s);
+                        SafeCopyToCharBuffer(s, key);
                     }
 
                     if (ImGui::Button("Login", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
