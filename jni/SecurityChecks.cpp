@@ -23,6 +23,7 @@ int yaserClose() {
     JNIEnv *java_env = nullptr;
     bool attached_by_this_function = false;
     jclass native_activity_clazz = nullptr;
+    jmethodID method_id = nullptr;
 
     jint jni_return = java_vm->GetEnv((void **)&java_env, JNI_VERSION_1_6);
     if (jni_return == JNI_ERR)
@@ -42,7 +43,7 @@ int yaserClose() {
         goto cleanup;
     }
 
-    jmethodID method_id = java_env->GetMethodID(native_activity_clazz, "AndroidThunkJava_RestartGame", "()V");
+    method_id = java_env->GetMethodID(native_activity_clazz, "AndroidThunkJava_RestartGame", "()V");
     if (method_id == nullptr) {
         jni_return = -4;
         goto cleanup;
