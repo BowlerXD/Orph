@@ -3,28 +3,24 @@
 #include <cstdint>
 #include <cstring>
 #include "Unity/Struct/Vector3.hpp"
+#include "OffsetCache.h"
 
 typedef unsigned long dword;
 
-inline bool ShouldLogResolveFail(uint32_t &counter) {
-    ++counter;
-    return counter == 1 || (counter % 300) == 0;
-}
-
 uintptr_t Screen_get_width() {
-	return (uintptr_t) Il2CppGetMethodOffset("UnityEngine.CoreModule.dll", "UnityEngine", "Display", "get_systemWidth");
+	return RESOLVE_METHOD_CACHED("UnityEngine.CoreModule.dll", "UnityEngine", "Display", "get_systemWidth");
 }
 
 uintptr_t Screen_get_height() {
-	return (uintptr_t) Il2CppGetMethodOffset("UnityEngine.CoreModule.dll", "UnityEngine", "Display", "get_systemHeight");
+	return RESOLVE_METHOD_CACHED("UnityEngine.CoreModule.dll", "UnityEngine", "Display", "get_systemHeight");
 }
 
 uintptr_t Screen_SetResolution() {
-    return (uintptr_t) Il2CppGetMethodOffset("UnityEngine.CoreModule.dll", "UnityEngine", "Screen", "SetResolution", 3);
+    return RESOLVE_METHOD_CACHED("UnityEngine.CoreModule.dll", "UnityEngine", "Screen", "SetResolution", 3);
 }
 
 uintptr_t Screen_get_dpi(){
-	return (uintptr_t) Il2CppGetMethodOffset("UnityEngine.CoreModule.dll", "UnityEngine", "Screen", "get_dpi");
+	return RESOLVE_METHOD_CACHED("UnityEngine.CoreModule.dll", "UnityEngine", "Screen", "get_dpi");
 }
 
 class Screen {
@@ -48,63 +44,35 @@ class Screen {
 };
 
 uintptr_t Camera_get_main() {
-    static uint32_t failCounter = 0;
-    static uintptr_t method = 0;
-    if (!method) {
-        method = (uintptr_t) Il2CppGetMethodOffset("UnityEngine.CoreModule.dll", "UnityEngine", "Camera", "get_main");
-        if (!method && ShouldLogResolveFail(failCounter)) {
-        }
-    }
-    return method;
+    return RESOLVE_METHOD_CACHED("UnityEngine.CoreModule.dll", "UnityEngine", "Camera", "get_main");
 }
 
 // Function to replace Camera_WorldToScreenPoint
 uintptr_t Camera_WorldToScreenPoint() {
-    static uint32_t failCounter = 0;
-    static uintptr_t method = 0;
-    if (!method) {
-        method = (uintptr_t) Il2CppGetMethodOffset("UnityEngine.CoreModule.dll", "UnityEngine", "Camera", "WorldToScreenPoint", 1);
-        if (!method && ShouldLogResolveFail(failCounter)) {
-        }
-    }
-    return method;
+    return RESOLVE_METHOD_CACHED("UnityEngine.CoreModule.dll", "UnityEngine", "Camera", "WorldToScreenPoint", 1);
 }
 
 // Function to replace Camera_get_fieldOfView
 uintptr_t Camera_get_fieldOfView() {
-    return (uintptr_t) Il2CppGetMethodOffset("UnityEngine.CoreModule.dll", "UnityEngine", "Camera", "get_fieldOfView");
+    return RESOLVE_METHOD_CACHED("UnityEngine.CoreModule.dll", "UnityEngine", "Camera", "get_fieldOfView");
 }
 
 // Function to replace Camera_set_fieldOfView
 uintptr_t Camera_set_fieldOfView() {
-    return (uintptr_t) Il2CppGetMethodOffset("UnityEngine.CoreModule.dll", "UnityEngine", "Camera", "set_fieldOfView", 1);
+    return RESOLVE_METHOD_CACHED("UnityEngine.CoreModule.dll", "UnityEngine", "Camera", "set_fieldOfView", 1);
 }
 
 //Class Transform
 uintptr_t Transform_get_position(){
-    static uint32_t failCounter = 0;
-    static uintptr_t method = 0;
-    if (!method) {
-        method = (uintptr_t) Il2CppGetMethodOffset("UnityEngine.CoreModule.dll", "UnityEngine", "Transform", "get_position");
-        if (!method && ShouldLogResolveFail(failCounter)) {
-        }
-    }
-	return method;
+	return RESOLVE_METHOD_CACHED("UnityEngine.CoreModule.dll", "UnityEngine", "Transform", "get_position");
 }
 
 uintptr_t Transform_get_localPosition(){
-    static uint32_t failCounter = 0;
-    static uintptr_t method = 0;
-    if (!method) {
-        method = (uintptr_t) Il2CppGetMethodOffset("UnityEngine.CoreModule.dll", "UnityEngine", "Transform", "get_localPosition");
-        if (!method && ShouldLogResolveFail(failCounter)) {
-        }
-    }
-	return method;
+	return RESOLVE_METHOD_CACHED("UnityEngine.CoreModule.dll", "UnityEngine", "Transform", "get_localPosition");
 }
 
 uintptr_t Transform_set_position(){
-	return (uintptr_t) Il2CppGetMethodOffset("UnityEngine.CoreModule.dll", "UnityEngine", "Transform", "set_position", 1);
+	return RESOLVE_METHOD_CACHED("UnityEngine.CoreModule.dll", "UnityEngine", "Transform", "set_position", 1);
 }
 
 //Class Bullet
@@ -122,13 +90,15 @@ uintptr_t Bullet_transform(){
 
 //Class LogicPlayer
 uintptr_t LogicPlayer_KillWildTimes(){
-	return (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "Battle", "LogicPlayer", "_KillWildTimes");
+	return RESOLVE_FIELD_CACHED("Assembly-CSharp.dll", "Battle", "LogicPlayer", "_KillWildTimes");
 }
 uintptr_t LogicPlayer_m_PlayerData(){
-	return (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "Battle", "LogicPlayer", "m_PlayerData");
+	return RESOLVE_FIELD_CACHED("Assembly-CSharp.dll", "Battle", "LogicPlayer", "m_PlayerData");
 }
 
-#define LogicPlayer_LogicUpdate (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "Battle", "LogicPlayer", "LogicUpdate", 1)
+inline uintptr_t LogicPlayer_LogicUpdate() {
+    return RESOLVE_METHOD_CACHED("Assembly-CSharp.dll", "Battle", "LogicPlayer", "LogicUpdate", 1);
+}
 #define LogicPlayer__QuadraKillTimes (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "Battle", "LogicPlayer", "_QuadraKillTimes")
 
 class Transform {
@@ -149,29 +119,22 @@ public:
 };
 
 uintptr_t LogicBattleEndCtrl_get_logicBattleManager(){
-	return (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "LogicBattleEndCtrl","get_logicBattleManager");
+	return RESOLVE_METHOD_CACHED("Assembly-CSharp.dll", "", "LogicBattleEndCtrl","get_logicBattleManager");
 }
 uintptr_t LogicBattleManager_GetBattleState(){
-	return (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "LogicBattleManager", "GetBattleState");
+	return RESOLVE_METHOD_CACHED("Assembly-CSharp.dll", "", "LogicBattleManager", "GetBattleState");
 }
 
 uintptr_t LogicBattleManager_GetPlayerLogic() {
-    return (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "LogicBattleManager", "GetPlayerLogic", 1);
+    return RESOLVE_METHOD_CACHED("Assembly-CSharp.dll", "", "LogicBattleManager", "GetPlayerLogic", 1);
 }
 
 uintptr_t LogicBattleManager_Instan() {
-    return (uintptr_t) Il2CppGetStaticFieldOffset("Assembly-CSharp.dll", "", "LogicBattleManager", "Instance");
+    return RESOLVE_STATIC_FIELD_CACHED("Assembly-CSharp.dll", "", "LogicBattleManager", "Instance");
 }
 
 uintptr_t LogicBattleManager_GetPlayerRealSelf(){
-    static uint32_t failCounter = 0;
-    static uintptr_t method = 0;
-    if (!method) {
-        method = (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "LogicBattleManager", "GetPlayerRealSelf");
-        if (!method && ShouldLogResolveFail(failCounter)) {
-        }
-    }
-	return method;
+	return RESOLVE_METHOD_CACHED("Assembly-CSharp.dll", "", "LogicBattleManager", "GetPlayerRealSelf");
 }
 
 uintptr_t LogicBattleManager_mState(){
@@ -199,22 +162,28 @@ uintptr_t VirtualButton_m_States(){
 
 // dump: ShowSelfPlayer.TryUseSkill(skillId, ...) -> overload argCount 9
 inline uintptr_t ResolveShowSelfPlayer_TryUseSkill2() {
-    uintptr_t method = (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowSelfPlayer", "TryUseSkill", 9);
-    return method;
+    return RESOLVE_METHOD_CACHED("Assembly-CSharp.dll", "", "ShowSelfPlayer", "TryUseSkill", 9);
 }
 
 // dump: ShowSelfPlayer.TryUseSkill(out state, ...) -> overload argCount 12
 inline uintptr_t ResolveShowSelfPlayer_TryUseSkill() {
-    uintptr_t method = (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowSelfPlayer", "TryUseSkill", 12);
-    return method;
+    return RESOLVE_METHOD_CACHED("Assembly-CSharp.dll", "", "ShowSelfPlayer", "TryUseSkill", 12);
 }
 
 #define ShowSelfPlayer_TryUseSkill2 ResolveShowSelfPlayer_TryUseSkill2()
 #define ShowSelfPlayer_TryUseSkill ResolveShowSelfPlayer_TryUseSkill()
-#define ShowSelfPlayer_SendWeakNetActivity2Logic (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowSelfPlayer", "SendWeakNetActivity2Logic", 0)
-#define ShowSelfPlayer_TryMove (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowSelfPlayer", "TryMove", 1)
-#define ShowSelfPlayer_Unity_ChangeMove (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowSelfPlayer", "Unity_ChangeMove", 0)
-#define ShowSelfPlayer_OnUpdate (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowSelfPlayer", "Unity_OnUpdate",0)
+inline uintptr_t ShowSelfPlayer_SendWeakNetActivity2Logic() {
+    return RESOLVE_METHOD_CACHED("Assembly-CSharp.dll", "", "ShowSelfPlayer", "SendWeakNetActivity2Logic", 0);
+}
+inline uintptr_t ShowSelfPlayer_TryMove() {
+    return RESOLVE_METHOD_CACHED("Assembly-CSharp.dll", "", "ShowSelfPlayer", "TryMove", 1);
+}
+inline uintptr_t ShowSelfPlayer_Unity_ChangeMove() {
+    return RESOLVE_METHOD_CACHED("Assembly-CSharp.dll", "", "ShowSelfPlayer", "Unity_ChangeMove", 0);
+}
+inline uintptr_t ShowSelfPlayer_OnUpdate() {
+    return RESOLVE_METHOD_CACHED("Assembly-CSharp.dll", "", "ShowSelfPlayer", "Unity_OnUpdate", 0);
+}
 
 uintptr_t SystemData_GetBattlePlayerInfo() {
     return (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "SystemData", "GetBattlePlayerInfo", 0);
@@ -385,7 +354,9 @@ uintptr_t CmdHeroCultivateRoadShow_iRoad(){
 
 //field
 
-#define UiHeadInfo_LateUpdate (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "UIHeadInfo", "Update")
+inline uintptr_t UiHeadInfo_LateUpdate() {
+    return RESOLVE_METHOD_CACHED("Assembly-CSharp.dll", "", "UIHeadInfo", "Update");
+}
 uintptr_t BattleBridge_ShowHeadEquip(){
 	return (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "BattleBridge", "ShowHeadEquip", 3);
 }
@@ -395,11 +366,18 @@ uintptr_t BattleBridge_bStartBattle(){
 }
 
 // Maphack runtime bridge methods
-#define MapEntityContainer_SetMapEntityIconPos (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "MapEntityContainer", "SetMapEntityIconPos", 3)
-
-#define BattleBridge_SetMapEntityIconPos (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "BattleBridge", "SetMapEntityIconPos", 3)
-#define BattleBridge_SetMapInvisibility (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "BattleBridge", "SetMapInvisibility", 3)
-#define BattleBridge_SetBloodInvisibility (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "BattleBridge", "SetBloodInvisibility", 5)
+inline uintptr_t MapEntityContainer_SetMapEntityIconPos() {
+    return RESOLVE_METHOD_CACHED("Assembly-CSharp.dll", "", "MapEntityContainer", "SetMapEntityIconPos", 3);
+}
+inline uintptr_t BattleBridge_SetMapEntityIconPos() {
+    return RESOLVE_METHOD_CACHED("Assembly-CSharp.dll", "", "BattleBridge", "SetMapEntityIconPos", 3);
+}
+inline uintptr_t BattleBridge_SetMapInvisibility() {
+    return RESOLVE_METHOD_CACHED("Assembly-CSharp.dll", "", "BattleBridge", "SetMapInvisibility", 3);
+}
+inline uintptr_t BattleBridge_SetBloodInvisibility() {
+    return RESOLVE_METHOD_CACHED("Assembly-CSharp.dll", "", "BattleBridge", "SetBloodInvisibility", 5);
+}
 uintptr_t BattleBridge_SynBloodAttr(){
 	return (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "BattleBridge", "SynBloodAttr", 2);
 }
@@ -462,8 +440,12 @@ uintptr_t ShowEntity_m_id(){
 	return (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "ShowEntity", "m_ID");
 }
 
-#define ShowEntity_OnUpdate (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowEntity" , "Unity_OnUpdate", 0)
-#define ShowEntity_get_InTransformation (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowEntity", "get_InTransformation")
+inline uintptr_t ShowEntity_OnUpdate() {
+    return RESOLVE_METHOD_CACHED("Assembly-CSharp.dll", "", "ShowEntity", "Unity_OnUpdate", 0);
+}
+inline uintptr_t ShowEntity_get_InTransformation() {
+    return RESOLVE_METHOD_CACHED("Assembly-CSharp.dll", "", "ShowEntity", "get_InTransformation");
+}
 #define ShowEntity_bShowEntityLayer (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "ShowEntity", "bShowEntityLayer")
 #define ShowEntity_IsSoldier (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "ShowEntity", "IsSoldier")
 #define ShowEntity_IsTower (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "ShowEntity", "IsTower")
@@ -649,7 +631,7 @@ void *ShowEntity_get_logicFighter(void *instance) {
 }
 
 bool get_InTransformation(void* instance) {
-    return reinterpret_cast<bool(__fastcall *)(void *)>(ShowEntity_get_InTransformation)(instance);
+    return reinterpret_cast<bool(__fastcall *)(void *)>(ShowEntity_get_InTransformation())(instance);
 }
 
 uintptr_t GetPlayerRealSelf() {

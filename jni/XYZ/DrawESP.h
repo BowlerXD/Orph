@@ -258,7 +258,7 @@ DefineHook(void, UpdateMapHack, (void * pThis)) {
 						}
 						
                         if (Config.Visual.MaphackIcon) {
-                            auto SetMapEntityIconPos = (void (*)(void *, Vector3, int, bool)) (BattleBridge_SetMapEntityIconPos);
+                            auto SetMapEntityIconPos = (void (*)(void *, Vector3, int, bool)) (BattleBridge_SetMapEntityIconPos());
                             //auto SetMapInvisibility = (void (*)(void *, bool, bool, bool)) (BattleBridge_SetMapInvisibility);                            
                             //SetMapInvisibility(BattleBridge_Instance, bShowEntityLayer, true, m_bDeath);
                             if (SetMapEntityIconPos) {
@@ -268,7 +268,7 @@ DefineHook(void, UpdateMapHack, (void * pThis)) {
                         }
                         
                         if (Config.Visual.HealthBar) {
-                            auto SetBloodInvisibility = (void (*)(void *, int, bool, bool, bool, int)) (BattleBridge_SetBloodInvisibility);
+                            auto SetBloodInvisibility = (void (*)(void *, int, bool, bool, bool, int)) (BattleBridge_SetBloodInvisibility());
                             auto SynBloodAttr = (void (*)(void *, void *, bool)) (BattleBridge_SynBloodAttr());
                             auto UpdateBloodPos = (void (*)(void *, void *, bool)) (BattleBridge_UpdateBloodPos());
                             if (SetBloodInvisibility && SynBloodAttr && UpdateBloodPos) {
@@ -314,8 +314,8 @@ DefineHook(void, UpdateMapHack, (void * pThis)) {
                         auto m_uGuid = *(int *) ((uintptr_t)Pawn + EntityBase_m_uGuid());
                         auto _Position = *(Vector3 *) ((uintptr_t)Pawn + ShowEntity__Position());
                         if (Config.Visual.MonsterIcon || (Config.MinimapIcon && isSoldier)) {
-                            auto SetMapEntityIconPos = (void (*)(void *, Vector3, int, bool)) (BattleBridge_SetMapEntityIconPos);
-                            auto SetMapInvisibility = (void (*)(void *, int, bool, bool)) (BattleBridge_SetMapInvisibility);                            
+                            auto SetMapEntityIconPos = (void (*)(void *, Vector3, int, bool)) (BattleBridge_SetMapEntityIconPos());
+                            auto SetMapInvisibility = (void (*)(void *, int, bool, bool)) (BattleBridge_SetMapInvisibility());
                             if (SetMapEntityIconPos && m_uGuid > 0) {
                                 if (!isSoldier && SetMapInvisibility) {
                                     SetMapInvisibility(BattleBridge_Instance, m_uGuid, true, m_bDeath);
@@ -325,7 +325,7 @@ DefineHook(void, UpdateMapHack, (void * pThis)) {
                         }
                         
                         if (Config.Visual.MonsterHealth) {
-                            auto SetBloodInvisibility = (void (*)(void *, int, bool, bool, bool, int)) (BattleBridge_SetBloodInvisibility);
+                            auto SetBloodInvisibility = (void (*)(void *, int, bool, bool, bool, int)) (BattleBridge_SetBloodInvisibility());
                             auto SynBloodAttr = (void (*)(void *, void *, bool)) (BattleBridge_SynBloodAttr());
                             auto UpdateBloodPos = (void (*)(void *, void *, bool)) (BattleBridge_UpdateBloodPos());
                             
