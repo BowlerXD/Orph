@@ -13,9 +13,9 @@ from typing import Dict, List, Optional, Set, Tuple
 
 
 METHOD_DECL_RE = re.compile(
-    r"^\s*(?:\[[^\]]+\]\s*)*(?:public|private|protected|internal)\s+"
-    r"(?:static\s+|virtual\s+|override\s+|sealed\s+|extern\s+|unsafe\s+|new\s+|abstract\s+|partial\s+)*"
-    r"[\w<>,\[\]\.\?\s]+\s+([A-Za-z_][\w]*|\.[A-Za-z_][\w]*)\s*\(([^)]*)\)"
+    r"^\s*(?:\[[^\]]+\]\s*)*"
+    r"(?P<access>public|private|protected|internal)\s+"
+    r"(?P<tail>.+?)\s*\((?P<args>[^)]*)\)"
 )
 
 FIELD_DECL_RE = re.compile(
@@ -27,6 +27,20 @@ CLASS_DECL_RE = re.compile(r"^\s*(?:public|private|internal|protected)?\s*(?:abs
 NAMESPACE_COMMENT_RE = re.compile(r"^\s*//\s*Namespace:\s*(.*)$")
 VALID_SYMBOL_TYPES = {"class", "field", "method"}
 ISSUE_STATUSES = {"MISSING", "SIGNATURE_MISMATCH"}
+METHOD_MODIFIERS = {
+    "static",
+    "virtual",
+    "override",
+    "sealed",
+    "extern",
+    "unsafe",
+    "new",
+    "abstract",
+    "partial",
+    "async",
+    "readonly",
+    "final",
+}
 
 
 @dataclass
@@ -141,6 +155,30 @@ def parse_arg_count(args_blob: str) -> int:
     return sum(1 for p in parts if p and p != "void")
 
 
+def extract_method_signature(line: str) -> Optional[Tuple[str, str]]:
+    method_match = METHOD_DECL_RE.match(line)
+    if not method_match:
+        return None
+
+    tail = method_match.group("tail").strip()
+    args_blob = method_match.group("args")
+    if not tail:
+        return None
+
+    tokens = tail.split()
+    while tokens and tokens[0] in METHOD_MODIFIERS:
+        tokens.pop(0)
+
+    if len(tokens) < 2:
+        return None
+
+    method_name = tokens[-1]
+    if not re.match(r"^(?:\.[A-Za-z_]\w*|[A-Za-z_<>]\S*)$", method_name):
+        return None
+
+    return method_name, args_blob
+
+
 def parse_dump(dump_path: Path) -> Dict[str, ClassData]:
     classes: Dict[str, ClassData] = {}
 
@@ -186,9 +224,9 @@ def parse_dump(dump_path: Path) -> Dict[str, ClassData]:
             if current_class_fqcn:
                 class_data = classes[current_class_fqcn]
 
-                method_match = METHOD_DECL_RE.match(line)
-                if method_match:
-                    method_name, args_blob = method_match.groups()
+                method_signature = extract_method_signature(line)
+                if method_signature:
+                    method_name, args_blob = method_signature
                     arg_count = parse_arg_count(args_blob)
                     class_data.methods.setdefault(method_name, set()).add(arg_count)
                     methods_detected += 1
