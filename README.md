@@ -4,32 +4,44 @@
 
 Tambahan utilitas untuk cek simbol IL2CPP kritikal terhadap dump `.cs`.
 
-### File yang ditambahkan
-- Script: `tools/symbol_validation/validate_symbols.py`
+### File validasi simbol
+- Validator: `tools/symbol_validation/validate_symbols.py`
 - Daftar simbol kritikal: `tools/symbol_validation/critical_symbols.json`
-- Output report default:
-  - `reports/symbol_validation_report.json`
-  - `reports/symbol_validation_report.txt`
+- Workflow update dump: `tools/symbol_validation/update_from_dump.sh`
+- Lokasi dump standar: `artifacts/dumps/`
+- Lokasi report per versi dump: `reports/symbol_validation/`
 
-### Cara menjalankan
+### Workflow update dump baru (URL/file)
+Gunakan script berikut supaya alur update dump konsisten:
+
+```bash
+tools/symbol_validation/update_from_dump.sh <dump_url_atau_path_file>
+```
+
+Contoh untuk dump rilis `v2`:
+
+```bash
+tools/symbol_validation/update_from_dump.sh \
+  https://github.com/BowlerXD/Orph/releases/download/v2/com.mobile.legends_2.1.61.11705.cs
+```
+
+Yang dilakukan script:
+1. Simpan dump ke `artifacts/dumps/<nama_file_dump>.cs`.
+2. Jalankan `validate_symbols.py` terhadap dump tersebut.
+3. Generate report versi dump ke:
+   - `reports/symbol_validation/<nama_file_dump_tanpa_.cs>.json`
+   - `reports/symbol_validation/<nama_file_dump_tanpa_.cs>.txt`
+
+Opsional agar command gagal jika ada `MISSING`/`SIGNATURE_MISMATCH`:
+
+```bash
+tools/symbol_validation/update_from_dump.sh <dump_url_atau_path_file> --fail-on-issues
+```
+
+### Menjalankan validator secara manual
 ```bash
 python3 tools/symbol_validation/validate_symbols.py \
   --dump /path/ke/dump.cs
-```
-
-Contoh dengan output custom:
-```bash
-python3 tools/symbol_validation/validate_symbols.py \
-  --dump /path/ke/dump.cs \
-  --report-json reports/release_symbol_report.json \
-  --report-txt reports/release_symbol_report.txt
-```
-
-Jika ingin pipeline gagal saat ada issue (`MISSING`/`SIGNATURE_MISMATCH`):
-```bash
-python3 tools/symbol_validation/validate_symbols.py \
-  --dump /path/ke/dump.cs \
-  --fail-on-issues
 ```
 
 ### Format status report
@@ -37,19 +49,23 @@ python3 tools/symbol_validation/validate_symbols.py \
 - `MISSING`: class/member tidak ditemukan di dump.
 - `SIGNATURE_MISMATCH`: method ada, tapi jumlah argumen (`arg_count`) beda.
 
-Catatan: utilitas ini standalone dan tidak mengubah build utama.
-
 ### Baseline dump kompatibilitas
 - Baseline validator saat ini: `com.mobile.legends_2.1.61.11705.cs` (rilis `v2`, 2026-03-31).
 - Contoh validasi baseline:
   ```bash
-  python3 tools/symbol_validation/validate_symbols.py \
-    --dump /tmp/com.mobile.legends_2.1.61.11705.cs \
-    --report-json reports/release_2.1.61.11705_symbol_report.json \
-    --report-txt reports/release_2.1.61.11705_symbol_report.txt
+  tools/symbol_validation/update_from_dump.sh \
+    https://github.com/BowlerXD/Orph/releases/download/v2/com.mobile.legends_2.1.61.11705.cs
   ```
 - Hasil baseline saat ini: `FOUND=66`, `MISSING=6`, `SIGNATURE_MISMATCH=0`.
 - Daftar `MISSING` baseline: `AntiCheatReporter::.ctor`, `AntiCheatReporter::.cctor`, `BattleBridge::Instance`, `BattleBridge::bStartBattle`, `BattleBridge::OnSignReport`, `ACInterface::LoadCert`.
+
+### Checklist release (singkat)
+Sebelum merge update dump/simbol:
+- [ ] Update simbol kritikal pada `tools/symbol_validation/critical_symbols.json` jika ada perubahan offset/signature dari dump terbaru.
+- [ ] Jalankan validator (direkomendasikan lewat `update_from_dump.sh`).
+- [ ] Review semua entri `MISSING` di report, pastikan memang expected atau diperbaiki dulu sebelum merge.
+
+Catatan: utilitas ini standalone dan tidak mengubah build utama.
 
 ## Cara kerja fitur Anti AFK (tab Setting)
 
