@@ -344,14 +344,6 @@ void *main_thread(void *) {
     // Anti-AFK SetAIControl hook intentionally removed.
     // Keep startup hooks minimal to avoid stale symbol references.
 
-    uintptr_t battleBridgeSetAIControl = BattleBridge_SetAIControl();
-    if (battleBridgeSetAIControl) {
-        Tools::Hook((void *) battleBridgeSetAIControl, (void *) BattleBridge_SetAIControl_Hook, (void **) &oBattleBridge_SetAIControl);
-        LOGI("Hook installed: BattleBridge.SetAIControl -> BattleBridge_SetAIControl_Hook (0x%lx)", (unsigned long)battleBridgeSetAIControl);
-    } else {
-        LOGE("Hook skipped: BattleBridge.SetAIControl offset is 0");
-    }
-
     return 0;
 }
 
