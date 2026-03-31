@@ -209,6 +209,9 @@ inline uintptr_t ResolveShowSelfPlayer_TryUseSkill() {
 
 #define ShowSelfPlayer_TryUseSkill2 ResolveShowSelfPlayer_TryUseSkill2()
 #define ShowSelfPlayer_TryUseSkill ResolveShowSelfPlayer_TryUseSkill()
+#define ShowSelfPlayer_SendWeakNetActivity2Logic (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowSelfPlayer", "SendWeakNetActivity2Logic", 0)
+#define ShowSelfPlayer_TryMove (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowSelfPlayer", "TryMove", 1)
+#define ShowSelfPlayer_Unity_ChangeMove (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowSelfPlayer", "Unity_ChangeMove", 0)
 #define ShowSelfPlayer_OnUpdate (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowSelfPlayer", "Unity_OnUpdate",0)
 
 uintptr_t SystemData_GetBattlePlayerInfo() {
