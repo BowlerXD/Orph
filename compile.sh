@@ -11,4 +11,4 @@ if [ ! -f jni/Application.mk ]; then
   exit 1
 fi
 
-NDK_PROJECT_PATH=jni NDK_APPLICATION_MK=jni/Application.mk ~/ndk-aide/ndk-build
+NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=jni/Android.mk NDK_APPLICATION_MK=jni/Application.mk ~/ndk-aide/ndk-build

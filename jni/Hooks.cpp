@@ -3,9 +3,10 @@
 #include <dlfcn.h>
 #include <cstring>
 
-#include "Render.h"
 #include "Tools/Dobby/dobby.h"
 #include "xHook/xhook.h"
+
+void Render();
 
 namespace {
 int (*orig_memcmp)(const void *lhs, const void *rhs, size_t len) = nullptr;
