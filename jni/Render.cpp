@@ -1,0 +1,55 @@
+#include <algorithm>
+#include <chrono>
+#include <cmath>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <dirent.h>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <libgen.h>
+#include <map>
+#include <pthread.h>
+#include <sstream>
+#include <string>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <thread>
+#include <unistd.h>
+#include <vector>
+
+#include <android/asset_manager.h>
+#include <android/asset_manager_jni.h>
+#include <android/log.h>
+#include <android/native_window.h>
+#include <EGL/egl.h>
+#include <GLES3/gl3.h>
+#include <jni.h>
+
+#define IMGUI_DEFINE_MATH_OPERATORS
+#include "imgui.h"
+#include "imgui_additional.h"
+#include "imgui_themes.h"
+#include <android_native_app_glue.h>
+#include "backends/imgui_impl_android.h"
+#include "backends/imgui_impl_opengl3.h"
+
+#include "consolas.hpp"
+#include "Config/JNIStuff.h"
+#include "Config/setup.h"
+#include "Config/TouchSystem.h"
+#include "DrawMenu.h"
+#include "Tools/Il2Cpp.h"
+#include "Tools/Tools.h"
+#include "XYZ/Bypass.h"
+#include "XYZ/DrawESP.h"
+#include "XYZ/DrawMinimap.h"
+#include "XYZ/GameClass.h"
+#include "XYZ/IconMinimap/DrawIcon.h"
+#include "XYZ/Minimap.h"
+#include "XYZ/SDK.h"
+#include "XYZ/ToString.h"
+
+#include "Render.h"
