@@ -459,18 +459,6 @@ void DrawMenu() {
                 ImGui::EndTabItem();
             }
 			}
-			if (ImGui::BeginTabItem("Menu Auto")) {
-                if (!bFullChecked) {
-                    ImGui::Text("Menu Appears In Match");
-                } else {
-                    ImGui::Checkbox("AutoRetribution.RedandBlue", &AutoRetribution.RedandBlue);
-                    ImGui::Checkbox("AutoRetribution.TurtleandLord", &AutoRetribution.TurtleandLord);
-                    ImGui::Checkbox("AutoRetribution.Crab", &AutoRetribution.Crab);
-                    ImGui::Checkbox("AutoRetribution.litho", &AutoRetribution.litho);
-                    ImGui::SliderFloat("AutoRetribution.Custom", &AutoRetribution.Custom, 1.0f, 15.0f, "%.1f");
-                }
-                ImGui::EndTabItem();
-            }
 				static int SelectInfo = 0;
             static ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV;
             if (ImGui::BeginTabItem("Setting")) {
