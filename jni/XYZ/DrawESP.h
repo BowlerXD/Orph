@@ -9,11 +9,13 @@
 
 #include "ConfigName.h"
 #include "GameClass.h"
+#include "IconMinimap/DrawIcon.h"
 #include "IconMinimap/IconList.h"
 #include "Minimap.h"
 #include "SDK.h"
 #include "ToString.h"
 #include "DrawMinimap.h"
+#include "../imgui/icon.h"
 
 extern bool bFullChecked;
 

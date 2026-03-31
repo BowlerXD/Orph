@@ -1,4 +1,7 @@
 #pragma once
+#include <vector>
+#include <GLES2/gl2.h>
+
 #include "ICON.h"
 #include "SPELL.h"
 #include "RANK.h"
