@@ -159,7 +159,10 @@ void (*orig_ShowEntity__OnUpdate)(ShowEntity *showEntity);
 void _ShowEntity__OnUpdate(ShowEntity *showEntity) {
     if (showEntity != nullptr){
         if (Config.Visual.MapHackIcon2) {
-			*(bool *) (showEntity + Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "ShowEntity", "m_bUnityMinimapVisible")) = Config.Visual.MapHackIcon2;
+            static const uintptr_t kMinimapVisibleOffset = (uintptr_t)Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "ShowEntity", "m_bUnityMinimapVisible");
+            if (kMinimapVisibleOffset) {
+			    *(bool *) (showEntity + kMinimapVisibleOffset) = Config.Visual.MapHackIcon2;
+            }
         }
     }
     orig_ShowEntity__OnUpdate(showEntity);
@@ -168,71 +171,6 @@ void _ShowEntity__OnUpdate(ShowEntity *showEntity) {
 void (*orig_ShowPlayer_Unity_OnUpdate)(void* thisz);
 void _ShowPlayer_Unity_OnUpdate(void* thisz){
 	orig_ShowPlayer_Unity_OnUpdate(thisz);
-}
-
-static std::chrono::steady_clock::time_point g_LastAntiAfkPulse = std::chrono::steady_clock::time_point::min();
-static std::chrono::steady_clock::time_point g_AntiAfkToggleEnabledSince = std::chrono::steady_clock::time_point::min();
-static bool g_AntiAfkPrevToggleState = false;
-
-using ShowSelfPlayerTryUseSkill9Fn = int (*)(void *, int, Vector3, bool, Vector3, bool, bool, bool, bool, uint32_t);
-
-static inline void TickVirtualAntiAfk(bool inMatch) {
-    auto now = std::chrono::steady_clock::now();
-
-    if (!Config.AntiAfkOnAIControl) {
-        g_AntiAfkPrevToggleState = false;
-        g_AntiAfkToggleEnabledSince = std::chrono::steady_clock::time_point::min();
-        g_LastAntiAfkPulse = std::chrono::steady_clock::time_point::min();
-        return;
-    }
-
-    if (!g_AntiAfkPrevToggleState) {
-        g_AntiAfkPrevToggleState = true;
-        g_AntiAfkToggleEnabledSince = now;
-    }
-
-    if (!inMatch) {
-        return;
-    }
-
-    if (std::chrono::duration_cast<std::chrono::milliseconds>(now - g_AntiAfkToggleEnabledSince).count() < 40000) {
-        return;
-    }
-
-    if (std::chrono::duration_cast<std::chrono::milliseconds>(now - g_LastAntiAfkPulse).count() < 60000) {
-        return;
-    }
-
-    void *battleManagerInstance = nullptr;
-    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
-    if (!battleManagerInstance) {
-        return;
-    }
-
-    auto localPlayerShow = *(uintptr_t *) ((uintptr_t)battleManagerInstance + BattleManager_m_LocalPlayerShow());
-    if (!localPlayerShow) {
-        return;
-    }
-
-    // Virtual analog pulse (very small) to keep AFK timer alive without visible joystick drag.
-    auto moveDirOffset = ShowEntity_MoveDir();
-    if (moveDirOffset) {
-        auto *moveDir = reinterpret_cast<Vector3 *>((uintptr_t)localPlayerShow + moveDirOffset);
-        if (moveDir) {
-            const float axis = ((std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count() & 1) == 0) ? 0.02f : -0.02f;
-            moveDir->x = axis;
-            moveDir->y = 0.0f;
-            moveDir->z = 0.0f;
-        }
-    }
-
-    // Virtual basic-attack/skill pulse via internal API (no real screen click).
-    uintptr_t tryUseSkill = ShowSelfPlayer_TryUseSkill2;
-    if (tryUseSkill) {
-        auto fn = reinterpret_cast<ShowSelfPlayerTryUseSkill9Fn>(tryUseSkill);
-        fn((void *)localPlayerShow, 0, Vector3::zero(), true, Vector3::zero(), true, false, false, true, 0);
-    }
-    g_LastAntiAfkPulse = now;
 }
 
 void (*oLogicPlayer_Update)(void* thisz, int status);
@@ -282,19 +220,25 @@ DefineHook(void, UpdateMapHack, (void * pThis)) {
                 bFullChecked = true;
             }
             if (BattleManager_Instance) {
-                auto m_ShowPlayers = *(List<void **> **) ((uintptr_t)BattleManager_Instance + BattleManager_m_ShowPlayers());
+                static const uintptr_t kSameCampOffset = EntityBase_m_bSameCampType();
+                static const uintptr_t kDeathOffset = EntityBase_m_bDeath();
+                static const uintptr_t kCanSightOffset = EntityBase_canSight();
+                static const uintptr_t kGuidOffset = EntityBase_m_uGuid();
+                static const uintptr_t kPosOffset = ShowEntity__Position();
+                static const uintptr_t kShowPlayersOffset = BattleManager_m_ShowPlayers();
+                auto m_ShowPlayers = *(List<void **> **) ((uintptr_t)BattleManager_Instance + kShowPlayersOffset);
                 if (m_ShowPlayers) {
                     for (int i = 0; i < m_ShowPlayers->getSize(); i++) {
                         auto Pawn = m_ShowPlayers->getItems()[i];               
                         if (!Pawn) continue;
-                        auto m_bSameCampType = *(bool *) ((uintptr_t)Pawn + EntityBase_m_bSameCampType());
+                        auto m_bSameCampType = *(bool *) ((uintptr_t)Pawn + kSameCampOffset);
                         if (m_bSameCampType) continue;
-                        auto m_bDeath = *(bool *) ((uintptr_t)Pawn + EntityBase_m_bDeath());
+                        auto m_bDeath = *(bool *) ((uintptr_t)Pawn + kDeathOffset);
                         if (m_bDeath) continue;
-                        auto canSight = *(bool *) ((uintptr_t)Pawn + EntityBase_canSight());
+                        auto canSight = *(bool *) ((uintptr_t)Pawn + kCanSightOffset);
                         if (canSight) continue;
-                        auto m_uGuid = *(int *) ((uintptr_t)Pawn + EntityBase_m_uGuid());
-                        auto _Position = *(Vector3 *) ((uintptr_t)Pawn + ShowEntity__Position());
+                        auto m_uGuid = *(int *) ((uintptr_t)Pawn + kGuidOffset);
+                        auto _Position = *(Vector3 *) ((uintptr_t)Pawn + kPosOffset);
                         auto *m_HeadIcon = *(String **) ((uintptr_t) Pawn + ShowEntity_m_HeadIcon);
 						if (Config.Visual.MapHackIcon2){
 							auto CanSightMapHack = (void (*)(void *, Vector3)) (ShowEntity_CanSight);
@@ -766,21 +710,12 @@ void NewDrawESP(ImDrawList *draw, float screenWidth, float screenHeight) {
         draw->AddText(NULL, ((float) screenHeight / 39.0f), {(float)(screenWidth / 4.0f) - (textSize.x / 2), (float)(screenHeight - screenHeight) + (float)(screenHeight / 8.7f)}, IM_COL32(10, 255, 202, 255), sFPS.c_str());
     }
     fps.update();
-    static time_t s_lastMinimapOverlayLog = 0;
-    int minimapSoldierOverlayCount = 0;
-    int minimapJungleOverlayCount = 0;
-
-    static bool loggedMissingOffsets = false;
     void *battleBridgeInstance = nullptr, *battleManagerInstance = nullptr;
     Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleData", "m_BattleBridge", &battleBridgeInstance);
     Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
     if (!battleBridgeInstance || !battleManagerInstance) {
-        if (!loggedMissingOffsets) {
-            loggedMissingOffsets = true;
-        }
         return;
     }
-    loggedMissingOffsets = false;
 
     if (sliderValue != 0.0f || SetFieldOfView != 0.0f) {
         DroneView();
@@ -793,14 +728,18 @@ void NewDrawESP(ImDrawList *draw, float screenWidth, float screenHeight) {
     
     auto battleManager = (uintptr_t) battleManagerInstance;
     if (!battleManager) return;
+    static const uintptr_t kLocalPlayerShowOffset = BattleManager_m_LocalPlayerShow();
+    static const uintptr_t kMonsterDictOffset = BattleManager_m_dicMonsterShow();
+    static const uintptr_t kPlayerDictOffset = BattleManager_m_dicPlayerShow();
+    static const uintptr_t kEntityPosOffset = ShowEntity__Position();
     /*self*/
-    auto m_LocalPlayerShow = *(uintptr_t *) ((uintptr_t)battleManager + BattleManager_m_LocalPlayerShow());
+    auto m_LocalPlayerShow = *(uintptr_t *) ((uintptr_t)battleManager + kLocalPlayerShowOffset);
     if (!m_LocalPlayerShow) return;
-    auto selfPos = *(Vector3 *) ((uintptr_t)m_LocalPlayerShow + ShowEntity__Position());
+    auto selfPos = *(Vector3 *) ((uintptr_t)m_LocalPlayerShow + kEntityPosOffset);
     auto selfCampType = *(int *) ((uintptr_t)m_LocalPlayerShow + EntityBase_m_EntityCampType());
     auto selfPosVec2 = getPosVec2(selfPos, screenWidth, screenHeight);
     /*monster*/
-    auto m_dicMonsterShow = *(Dictionary<int, uintptr_t> **) ((uintptr_t)battleManager + BattleManager_m_dicMonsterShow());
+    auto m_dicMonsterShow = *(Dictionary<int, uintptr_t> **) ((uintptr_t)battleManager + kMonsterDictOffset);
     if (!m_dicMonsterShow) return;
 
     for (int i = 0; i < m_dicMonsterShow->getNumKeys(); i++) {
@@ -817,7 +756,7 @@ void NewDrawESP(ImDrawList *draw, float screenWidth, float screenHeight) {
         auto m_Hp = *(int *) ((uintptr_t)values + EntityBase_m_Hp());
         auto m_HpMax = *(int *) ((uintptr_t)values + EntityBase_m_HpMax());
         //if (bShowEntityLayer && m_Hp != m_HpMax) continue;
-        auto _Position = *(Vector3 *) ((uintptr_t)values + ShowEntity__Position());
+        auto _Position = *(Vector3 *) ((uintptr_t)values + kEntityPosOffset);
         auto rootPosVec2 = getPosVec2(_Position, screenWidth, screenHeight);
 
         bool isSoldier = *(bool *) ((uintptr_t)values + ShowEntity_IsSoldier);
@@ -836,7 +775,6 @@ void NewDrawESP(ImDrawList *draw, float screenWidth, float screenHeight) {
             if (Config.MinimapMonsterIcon && isJungleMonster && !IsExcludedJungleObjective(jungleTypeId) && !isVisible) {
                 ImVec2 junglePos(minimapPosJungle.x, minimapPosJungle.y);
                 DrawJungleMinimapMarker(draw, junglePos, jungleTypeId);
-                minimapJungleOverlayCount++;
             }
 
             // Hero minimap icon is drawn with overlay; keep minion consistent with overlay path.
@@ -844,7 +782,6 @@ void NewDrawESP(ImDrawList *draw, float screenWidth, float screenHeight) {
                 ImVec2 soldierPos(minimapPosEntity.x, minimapPosEntity.y);
                 // Match native minimap dot style (solid red dot, no white border).
                 draw->AddCircleFilled(soldierPos, 2.9f, IM_COL32(255, 70, 70, 245), 12);
-                minimapSoldierOverlayCount++;
             }
         }
 
@@ -904,14 +841,11 @@ void NewDrawESP(ImDrawList *draw, float screenWidth, float screenHeight) {
             }
         }
     }
-    if (Config.MinimapIcon && (time(nullptr) - s_lastMinimapOverlayLog >= 5)) {
-        s_lastMinimapOverlayLog = time(nullptr);
-    }
     /*enemy*/
 	
 	
 	
-    auto m_dicPlayerShow = *(Dictionary<int, uintptr_t> **) ((uintptr_t)battleManager + BattleManager_m_dicPlayerShow());
+    auto m_dicPlayerShow = *(Dictionary<int, uintptr_t> **) ((uintptr_t)battleManager + kPlayerDictOffset);
     if (!m_dicPlayerShow) return;
     for (int i = 0; i < m_dicPlayerShow->getNumKeys(); i++) {
         auto keys = m_dicPlayerShow->getKeys()[i];
@@ -925,7 +859,7 @@ void NewDrawESP(ImDrawList *draw, float screenWidth, float screenHeight) {
         auto m_Hp = *(int *) ((uintptr_t)values + EntityBase_m_Hp());
         auto m_HpMax = *(int *) ((uintptr_t)values + EntityBase_m_HpMax());
         auto sPell = *(int *) ((uintptr_t)values + ShowPlayer_m_iSummonSkillId());
-        auto _Position = *(Vector3 *) ((uintptr_t)values + ShowEntity__Position());
+        auto _Position = *(Vector3 *) ((uintptr_t)values + kEntityPosOffset);
         auto rootPosVec2 = getPosVec2(_Position, screenWidth, screenHeight);
         auto spellDrawing = ImVec2(rootPosVec2.x + 55, rootPosVec2.y - 15);
         auto *m_HeroName = *(String **) ((uintptr_t)values + ShowPlayer_m_HeroName());

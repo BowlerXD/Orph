@@ -333,23 +333,9 @@ void *main_thread(void *) {
 	
 	DobbyInstrument(dlsym(RTLD_NEXT, "eglSwapBuffers"), eglSwapBuffers_handler);
 	
-	// Anti-cheat reporter hooks disabled to avoid loading-screen deadlock/stall.
     uintptr_t showEntityOnUpdate = ShowEntity_OnUpdate;
     if (showEntityOnUpdate) {
         Tools::Hook((void *) showEntityOnUpdate, (void *) UpdateMapHack, (void **) &oUpdateMapHack);
-        LOGI("Hook installed: ShowEntity.OnUpdate -> UpdateMapHack (0x%lx)", (unsigned long)showEntityOnUpdate);
-    } else {
-        LOGE("Hook skipped: ShowEntity.OnUpdate offset is 0");
-    }
-    // Anti-AFK SetAIControl hook intentionally removed.
-    // Keep startup hooks minimal to avoid stale symbol references.
-
-    uintptr_t battleBridgeSetAIControl = BattleBridge_SetAIControl();
-    if (battleBridgeSetAIControl) {
-        Tools::Hook((void *) battleBridgeSetAIControl, (void *) BattleBridge_SetAIControl_Hook, (void **) &oBattleBridge_SetAIControl);
-        LOGI("Hook installed: BattleBridge.SetAIControl -> BattleBridge_SetAIControl_Hook (0x%lx)", (unsigned long)battleBridgeSetAIControl);
-    } else {
-        LOGE("Hook skipped: BattleBridge.SetAIControl offset is 0");
     }
 
     return 0;
