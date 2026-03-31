@@ -342,6 +342,14 @@ void *main_thread(void *) {
         LOGE("Hook skipped: ShowEntity.OnUpdate offset is 0");
     }
 
+    uintptr_t battleBridgeSetAIControl = BattleBridge_SetAIControl();
+    if (battleBridgeSetAIControl) {
+        Tools::Hook((void *) battleBridgeSetAIControl, (void *) BattleBridge_SetAIControl_Hook, (void **) &oBattleBridge_SetAIControl);
+        LOGI("Hook installed: BattleBridge.SetAIControl -> BattleBridge_SetAIControl_Hook (0x%lx)", (unsigned long)battleBridgeSetAIControl);
+    } else {
+        LOGE("Hook skipped: BattleBridge.SetAIControl offset is 0");
+    }
+
     return 0;
 }
 

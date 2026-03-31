@@ -402,6 +402,10 @@ uintptr_t BattleBridge_UpdateBloodPos(){
 	return (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "BattleBridge", "UpdateBloodPos", 2);
 }
 
+uintptr_t BattleBridge_SetAIControl() {
+	return (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "BattleBridge", "SetAIControl", 5);
+}
+
 uintptr_t BattleManager_m_LocalPlayerShow(){
 	return (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "BattleManager", "m_LocalPlayerShow");
 }
