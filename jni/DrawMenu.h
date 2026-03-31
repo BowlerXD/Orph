@@ -260,23 +260,6 @@ inline bool ShouldShowGameplayTabs() {
     return selectedFeatures == 1 || selectedFeatures == 2;
 }
 
-inline bool IsAutoRetributionControlAllowed() {
-    void *battleBridgeInstance = nullptr;
-    void *battleManagerInstance = nullptr;
-    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleData", "m_BattleBridge", &battleBridgeInstance);
-    if (!battleBridgeInstance) {
-        Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleBridge", "Instance", &battleBridgeInstance);
-    }
-    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
-    if (!battleBridgeInstance || !battleManagerInstance) return false;
-
-    auto localPlayerShow = *(uintptr_t *) ((uintptr_t) battleManagerInstance + BattleManager_m_LocalPlayerShow());
-    if (!localPlayerShow) return false;
-
-    int battleState = GetBattleState();
-    return battleState != 7 && battleState != 8;
-}
-
 void DrawMenu() {
 	const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
 	ImVec2 center = ImGui::GetMainViewport()->GetCenter();
@@ -476,25 +459,17 @@ void DrawMenu() {
                 ImGui::EndTabItem();
             }
 			}
-            if (ShouldShowGameplayTabs()) {
-			    if (ImGui::BeginTabItem("Menu Auto")) {
-                    const bool autoRetributionGate = bFullChecked && IsAutoRetributionControlAllowed();
-                    if (!bFullChecked) {
-                        ImGui::Text("Menu Appears In Match");
-                    } else if (!autoRetributionGate) {
-                        ImGui::Text("Auto Retribution controls are available only in a valid match.");
-                    }
-
-                    ImGui::BeginDisabled(!autoRetributionGate);
+			if (ImGui::BeginTabItem("Menu Auto")) {
+                if (!bFullChecked) {
+                    ImGui::Text("Menu Appears In Match");
+                } else {
                     ImGui::Checkbox("AutoRetribution.RedandBlue", &AutoRetribution.RedandBlue);
                     ImGui::Checkbox("AutoRetribution.TurtleandLord", &AutoRetribution.TurtleandLord);
                     ImGui::Checkbox("AutoRetribution.Crab", &AutoRetribution.Crab);
                     ImGui::Checkbox("AutoRetribution.litho", &AutoRetribution.litho);
                     ImGui::SliderFloat("AutoRetribution.Custom", &AutoRetribution.Custom, 1.0f, 15.0f, "%.1f");
-                    ImGui::EndDisabled();
-
-                    ImGui::EndTabItem();
                 }
+                ImGui::EndTabItem();
             }
 				static int SelectInfo = 0;
             static ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV;
