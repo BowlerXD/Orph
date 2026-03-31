@@ -341,6 +341,8 @@ void *main_thread(void *) {
     } else {
         LOGE("Hook skipped: ShowEntity.OnUpdate offset is 0");
     }
+    // Anti-AFK SetAIControl hook intentionally removed.
+    // Keep startup hooks minimal to avoid stale symbol references.
 
     uintptr_t battleBridgeSetAIControl = BattleBridge_SetAIControl();
     if (battleBridgeSetAIControl) {
