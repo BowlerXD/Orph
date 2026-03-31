@@ -7,6 +7,10 @@
 #include <string>
 #include <unordered_map>
 
+#include "ConfigName.h"
+#include "GameClass.h"
+#include "SDK.h"
+
 extern bool bFullChecked;
 
 bool isOutsideScreen(ImVec2 pos, ImVec2 screen) {
