@@ -2,6 +2,9 @@
 
 #include <dlfcn.h>
 #include <cstring>
+#include <sys/mman.h>
+#include <unistd.h>
+#include <GLES3/gl3.h>
 
 #include "Tools/Dobby/dobby.h"
 #include "xHook/xhook.h"
