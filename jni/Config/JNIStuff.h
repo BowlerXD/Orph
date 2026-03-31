@@ -98,27 +98,100 @@ int GetSDKVersion(JNIEnv *env) {
     return (int)sdkInt;
 }
 
-const char *OpenYt(JNIEnv *env, jobject thiz) {
+bool OpenYt(JNIEnv *env, jobject thiz) {
+    if (env == nullptr || thiz == nullptr) {
+        return false;
+    }
+
     const char* urlStr = "vnd.youtube://@haxxcker/videos";
 
     jclass intentClass = env->FindClass("android/content/Intent");
-    jmethodID intentConstructor = env->GetMethodID(intentClass, "<init>", "(Ljava/lang/String;)V");
-    jobject intentObj = env->NewObject(intentClass, intentConstructor, env->NewStringUTF("android.intent.action.VIEW"));
+    if (intentClass == nullptr) {
+        return false;
+    }
 
+    jmethodID intentConstructor = env->GetMethodID(intentClass, "<init>", "(Ljava/lang/String;)V");
     jmethodID setDataMethod = env->GetMethodID(intentClass, "setData", "(Landroid/net/Uri;)Landroid/content/Intent;");
+    if (intentConstructor == nullptr || setDataMethod == nullptr) {
+        env->DeleteLocalRef(intentClass);
+        return false;
+    }
+
     jclass uriClass = env->FindClass("android/net/Uri");
+    if (uriClass == nullptr) {
+        env->DeleteLocalRef(intentClass);
+        return false;
+    }
+
     jmethodID parseMethod = env->GetStaticMethodID(uriClass, "parse", "(Ljava/lang/String;)Landroid/net/Uri;");
-    jobject uriObj = env->CallStaticObjectMethod(uriClass, parseMethod, env->NewStringUTF(urlStr));
+    if (parseMethod == nullptr) {
+        env->DeleteLocalRef(uriClass);
+        env->DeleteLocalRef(intentClass);
+        return false;
+    }
+
+    jstring actionStr = env->NewStringUTF("android.intent.action.VIEW");
+    jobject intentObj = env->NewObject(intentClass, intentConstructor, actionStr);
+    jstring urlJstr = env->NewStringUTF(urlStr);
+    jobject uriObj = env->CallStaticObjectMethod(uriClass, parseMethod, urlJstr);
     env->CallObjectMethod(intentObj, setDataMethod, uriObj);
 
     jclass intentChooserClass = env->FindClass("android/content/Intent");
+    if (intentChooserClass == nullptr) {
+        env->DeleteLocalRef(uriObj);
+        env->DeleteLocalRef(urlJstr);
+        env->DeleteLocalRef(intentObj);
+        env->DeleteLocalRef(actionStr);
+        env->DeleteLocalRef(uriClass);
+        env->DeleteLocalRef(intentClass);
+        return false;
+    }
+
     jmethodID createChooserMethod = env->GetStaticMethodID(intentChooserClass, "createChooser", "(Landroid/content/Intent;Ljava/lang/CharSequence;)Landroid/content/Intent;");
-    jobject chooserIntentObj = env->CallStaticObjectMethod(intentChooserClass, createChooserMethod, intentObj, env->NewStringUTF("Abrir"));
+    if (createChooserMethod == nullptr) {
+        env->DeleteLocalRef(intentChooserClass);
+        env->DeleteLocalRef(uriObj);
+        env->DeleteLocalRef(urlJstr);
+        env->DeleteLocalRef(intentObj);
+        env->DeleteLocalRef(actionStr);
+        env->DeleteLocalRef(uriClass);
+        env->DeleteLocalRef(intentClass);
+        return false;
+    }
+
+    jstring chooserTitle = env->NewStringUTF("Abrir");
+    jobject chooserIntentObj = env->CallStaticObjectMethod(intentChooserClass, createChooserMethod, intentObj, chooserTitle);
 
     jclass ak = env->GetObjectClass(thiz);
     jmethodID startActivityMethod = env->GetMethodID(ak, "startActivity", "(Landroid/content/Intent;)V");
+    if (startActivityMethod == nullptr) {
+        env->DeleteLocalRef(ak);
+        env->DeleteLocalRef(chooserIntentObj);
+        env->DeleteLocalRef(chooserTitle);
+        env->DeleteLocalRef(intentChooserClass);
+        env->DeleteLocalRef(uriObj);
+        env->DeleteLocalRef(urlJstr);
+        env->DeleteLocalRef(intentObj);
+        env->DeleteLocalRef(actionStr);
+        env->DeleteLocalRef(uriClass);
+        env->DeleteLocalRef(intentClass);
+        return false;
+    }
+
     env->CallVoidMethod(thiz, startActivityMethod, chooserIntentObj);
 
+    env->DeleteLocalRef(ak);
+    env->DeleteLocalRef(chooserIntentObj);
+    env->DeleteLocalRef(chooserTitle);
+    env->DeleteLocalRef(intentChooserClass);
+    env->DeleteLocalRef(uriObj);
+    env->DeleteLocalRef(urlJstr);
+    env->DeleteLocalRef(intentObj);
+    env->DeleteLocalRef(actionStr);
+    env->DeleteLocalRef(uriClass);
+    env->DeleteLocalRef(intentClass);
+
+    return true;
 }
 
 const char *GetAndroidID(JNIEnv *env, jobject context) {
