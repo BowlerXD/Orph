@@ -124,75 +124,75 @@ inline Vector3 operator-(Vector3 lhs, const Vector3 rhs);
 inline bool operator==(const Vector3 lhs, const Vector3 rhs);
 inline bool operator!=(const Vector3 lhs, const Vector3 rhs);
 
-Vector3::Vector3() : x(0), y(0), z(0) {}
-Vector3::Vector3(float data[]) : x(data[0]), y(data[1]), z(data[2]) {}
-Vector3::Vector3(float value) : x(value), y(value), z(value) {}
-Vector3::Vector3(float x, float y) : x(x), y(y), z(0) {}
-Vector3::Vector3(float x, float y, float z) : x(x), y(y), z(z) {}
+inline Vector3::Vector3() : x(0), y(0), z(0) {}
+inline Vector3::Vector3(float data[]) : x(data[0]), y(data[1]), z(data[2]) {}
+inline Vector3::Vector3(float value) : x(value), y(value), z(value) {}
+inline Vector3::Vector3(float x, float y) : x(x), y(y), z(0) {}
+inline Vector3::Vector3(float x, float y, float z) : x(x), y(y), z(z) {}
 
-Vector3 Vector3::zero() {
+inline Vector3 Vector3::zero() {
 	return Vector3(0, 0, 0);
 }
-Vector3 Vector3::One() {
+inline Vector3 Vector3::One() {
 	return Vector3(1, 1, 1);
 }
-Vector3 Vector3::Right() {
+inline Vector3 Vector3::Right() {
 	return Vector3(1, 0, 0);
 }
-Vector3 Vector3::Left() {
+inline Vector3 Vector3::Left() {
 	return Vector3(-1, 0, 0);
 }
-Vector3 Vector3::Up() {
+inline Vector3 Vector3::Up() {
 	return Vector3(0, 1, 0);
 }
-Vector3 Vector3::Down() {
+inline Vector3 Vector3::Down() {
 	return Vector3(0, -1, 0);
 }
-Vector3 Vector3::Forward() {
+inline Vector3 Vector3::Forward() {
 	return Vector3(0, 0, 1);
 }
-Vector3 Vector3::Backward() {
+inline Vector3 Vector3::Backward() {
 	return Vector3(0, 0, -1);
 }
 
 
-float Vector3::Angle(Vector3 a, Vector3 b) {
+inline float Vector3::Angle(Vector3 a, Vector3 b) {
 	float v = Dot(a, b) / (Magnitude(a) * Magnitude(b));
 	v = fmax(v, -1.0);
 	v = fmin(v, 1.0);
 	return acos(v);
 }
 
-Vector3 Vector3::ClampMagnitude(Vector3 vector, float maxLength) {
+inline Vector3 Vector3::ClampMagnitude(Vector3 vector, float maxLength) {
     float length = Magnitude(vector);
     if (length > maxLength)
         vector *= maxLength / length;
     return vector;
 }
 
-float Vector3::Component(Vector3 a, Vector3 b) {
+inline float Vector3::Component(Vector3 a, Vector3 b) {
     return Dot(a, b) / Magnitude(b);
 }
 
-Vector3 Vector3::Cross(Vector3 lhs, Vector3 rhs) {
+inline Vector3 Vector3::Cross(Vector3 lhs, Vector3 rhs) {
     float x = lhs.y * rhs.z - lhs.z * rhs.y;
     float y = lhs.z * rhs.x - lhs.x * rhs.z;
     float z = lhs.x * rhs.y - lhs.y * rhs.x;
     return Vector3(x, y, z);
 }
 
-float Vector3::Distance(Vector3 a, Vector3 b) {
+inline float Vector3::Distance(Vector3 a, Vector3 b) {
     return Vector3::Magnitude(a - b);
 }
-float Vector3::Distance2(Vector3 a, Vector3 b) {
+inline float Vector3::Distance2(Vector3 a, Vector3 b) {
     return sqrt(pow((a.x - b.x), 2) + pow((a.y - b.y), 2) + pow((a.z - b.z), 2));
 }
 
-float Vector3::Dot(Vector3 lhs, Vector3 rhs) {
+inline float Vector3::Dot(Vector3 lhs, Vector3 rhs) {
     return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z;
 }
 
-Vector3 Vector3::FromSpherical(float rad, float theta, float phi) {
+inline Vector3 Vector3::FromSpherical(float rad, float theta, float phi) {
     Vector3 v;
     v.x = rad * sin(theta) * cos(phi);
     v.y = rad * sin(theta) * sin(phi);
@@ -200,35 +200,35 @@ Vector3 Vector3::FromSpherical(float rad, float theta, float phi) {
     return v;
 }
 
-Vector3 Vector3::Lerp(Vector3 a, Vector3 b, float t) {
+inline Vector3 Vector3::Lerp(Vector3 a, Vector3 b, float t) {
     if (t < 0) return a;
     else if (t > 1) return b;
     return LerpUnclamped(a, b, t);
 }
 
-Vector3 Vector3::LerpUnclamped(Vector3 a, Vector3 b, float t) {
+inline Vector3 Vector3::LerpUnclamped(Vector3 a, Vector3 b, float t) {
     return (b - a) * t + a;
 }
 
-float Vector3::Magnitude(Vector3 v) {
+inline float Vector3::Magnitude(Vector3 v) {
     return sqrt(SqrMagnitude(v));
 }
 
-Vector3 Vector3::Max(Vector3 a, Vector3 b) {
+inline Vector3 Vector3::Max(Vector3 a, Vector3 b) {
     float x = a.x > b.x ? a.x : b.x;
     float y = a.y > b.y ? a.y : b.y;
     float z = a.z > b.z ? a.z : b.z;
     return Vector3(x, y, z);
 }
 
-Vector3 Vector3::Min(Vector3 a, Vector3 b) {
+inline Vector3 Vector3::Min(Vector3 a, Vector3 b) {
     float x = a.x > b.x ? b.x : a.x;
     float y = a.y > b.y ? b.y : a.y;
     float z = a.z > b.z ? b.z : a.z;
     return Vector3(x, y, z);
 }
 
-Vector3 Vector3::MoveTowards(Vector3 current, Vector3 target, float maxDistanceDelta) {
+inline Vector3 Vector3::MoveTowards(Vector3 current, Vector3 target, float maxDistanceDelta) {
     Vector3 d = target - current;
     float m = Magnitude(d);
     if (m < maxDistanceDelta || m == 0)
@@ -236,38 +236,38 @@ Vector3 Vector3::MoveTowards(Vector3 current, Vector3 target, float maxDistanceD
     return current + (d * maxDistanceDelta / m);
 }
 
-Vector3 Vector3::Normalized(Vector3 v) {
+inline Vector3 Vector3::Normalized(Vector3 v) {
     float mag = Magnitude(v);
     if (mag == 0)
         return Vector3::zero();
     return v / mag;
 }
-Vector3 Vector3::Normalize() {
+inline Vector3 Vector3::Normalize() {
     float mag = Magnitude(*this);
     if (mag == 0)
         return Vector3::zero();
     *this /= mag;
     return *this;
 }
-float NormalizeAngele(float a){
+inline float NormalizeAngele(float a){
     while (a > 360)
         a -= 360;
     while (a < 0)
         a += 360;
     return a;
 }
-Vector3 Vector3::NormalizeEuler() {
+inline Vector3 Vector3::NormalizeEuler() {
     x = NormalizeAngele(x);
     y = NormalizeAngele(y);
     z = NormalizeAngele(z);
     return *this;
 }
 
-Vector3 Vector3::Orthogonal(Vector3 v) {
+inline Vector3 Vector3::Orthogonal(Vector3 v) {
     return v.z < v.x ? Vector3(v.y, -v.x, 0) : Vector3(0, -v.z, v.y);
 }
 
-void Vector3::OrthoNormalize(Vector3 &normal, Vector3 &tangent, Vector3 &binormal) {
+inline void Vector3::OrthoNormalize(Vector3 &normal, Vector3 &tangent, Vector3 &binormal) {
     normal = Normalized(normal);
     tangent = ProjectOnPlane(tangent, normal);
     tangent = Normalized(tangent);
@@ -276,27 +276,27 @@ void Vector3::OrthoNormalize(Vector3 &normal, Vector3 &tangent, Vector3 &binorma
     binormal = Normalized(binormal);
 }
 
-Vector3 Vector3::Project(Vector3 a, Vector3 b) {
+inline Vector3 Vector3::Project(Vector3 a, Vector3 b) {
     float m = Magnitude(b);
     return Dot(a, b) / (m * m) * b;
 }
 
-Vector3 Vector3::ProjectOnPlane(Vector3 vector, Vector3 planeNormal)
+inline Vector3 Vector3::ProjectOnPlane(Vector3 vector, Vector3 planeNormal)
 {
     return Reject(vector, planeNormal);
 }
 
-Vector3 Vector3::Reflect(Vector3 vector, Vector3 planeNormal)
+inline Vector3 Vector3::Reflect(Vector3 vector, Vector3 planeNormal)
 {
     return vector - 2 * Project(vector, planeNormal);
 }
 
-Vector3 Vector3::Reject(Vector3 a, Vector3 b)
+inline Vector3 Vector3::Reject(Vector3 a, Vector3 b)
 {
     return a - Project(a, b);
 }
 
-Vector3 Vector3::RotateTowards(Vector3 current, Vector3 target,
+inline Vector3 Vector3::RotateTowards(Vector3 current, Vector3 target,
                                float maxRadiansDelta,
                                float maxMagnitudeDelta)
 {
@@ -325,19 +325,19 @@ Vector3 Vector3::RotateTowards(Vector3 current, Vector3 target,
     return newVector * newMag;
 }
 
-Vector3 Vector3::Scale(Vector3 a, Vector3 b)
+inline Vector3 Vector3::Scale(Vector3 a, Vector3 b)
 {
     return Vector3(a.x * b.x, a.y * b.y, a.z * b.z);
 }
 
-Vector3 Vector3::Slerp(Vector3 a, Vector3 b, float t)
+inline Vector3 Vector3::Slerp(Vector3 a, Vector3 b, float t)
 {
     if (t < 0) return a;
     else if (t > 1) return b;
     return SlerpUnclamped(a, b, t);
 }
 
-Vector3 Vector3::SlerpUnclamped(Vector3 a, Vector3 b, float t)
+inline Vector3 Vector3::SlerpUnclamped(Vector3 a, Vector3 b, float t)
 {
     float magA = Magnitude(a);
     float magB = Magnitude(b);
@@ -352,12 +352,12 @@ Vector3 Vector3::SlerpUnclamped(Vector3 a, Vector3 b, float t)
     return newVec * (magA + (magB - magA) * t);
 }
 
-float Vector3::SqrMagnitude(Vector3 v)
+inline float Vector3::SqrMagnitude(Vector3 v)
 {
     return v.x * v.x + v.y * v.y + v.z * v.z;
 }
 
-void Vector3::ToSpherical(Vector3 vector, float &rad, float &theta,
+inline void Vector3::ToSpherical(Vector3 vector, float &rad, float &theta,
                           float &phi)
 {
     rad = Magnitude(vector);
@@ -369,21 +369,21 @@ void Vector3::ToSpherical(Vector3 vector, float &rad, float &theta,
 }
 
 
-struct Vector3& Vector3::operator+=(const float rhs) {
+inline struct Vector3& Vector3::operator+=(const float rhs) {
     x += rhs;
     y += rhs;
     z += rhs;
     return *this;
 }
 
-struct Vector3& Vector3::operator-=(const float rhs) {
+inline struct Vector3& Vector3::operator-=(const float rhs) {
     x -= rhs;
     y -= rhs;
     z -= rhs;
     return *this;
 }
 
-struct Vector3& Vector3::operator*=(const float rhs)
+inline struct Vector3& Vector3::operator*=(const float rhs)
 {
     x *= rhs;
     y *= rhs;
@@ -391,7 +391,7 @@ struct Vector3& Vector3::operator*=(const float rhs)
     return *this;
 }
 
-struct Vector3& Vector3::operator/=(const float rhs)
+inline struct Vector3& Vector3::operator/=(const float rhs)
 {
     x /= rhs;
     y /= rhs;
@@ -399,7 +399,7 @@ struct Vector3& Vector3::operator/=(const float rhs)
     return *this;
 }
 
-struct Vector3& Vector3::operator+=(const Vector3 rhs)
+inline struct Vector3& Vector3::operator+=(const Vector3 rhs)
 {
     x += rhs.x;
     y += rhs.y;
@@ -407,7 +407,7 @@ struct Vector3& Vector3::operator+=(const Vector3 rhs)
     return *this;
 }
 
-struct Vector3& Vector3::operator-=(const Vector3 rhs)
+inline struct Vector3& Vector3::operator-=(const Vector3 rhs)
 {
     x -= rhs.x;
     y -= rhs.y;
@@ -415,32 +415,32 @@ struct Vector3& Vector3::operator-=(const Vector3 rhs)
     return *this;
 }
 
-Vector3 operator-(Vector3 rhs) {
+inline Vector3 operator-(Vector3 rhs) {
 	return rhs * -1;
 }
-Vector3 operator+(Vector3 lhs, const float rhs) {
+inline Vector3 operator+(Vector3 lhs, const float rhs) {
 	return lhs += rhs;
 }
-Vector3 operator-(Vector3 lhs, const float rhs) { return lhs -= rhs; }
-Vector3 operator*(Vector3 lhs, const float rhs) { return lhs *= rhs; }
-Vector3 operator/(Vector3 lhs, const float rhs) { return lhs /= rhs; }
-Vector3 operator+(const float lhs, Vector3 rhs) { return rhs += lhs; }
-Vector3 operator-(const float lhs, Vector3 rhs) { return rhs -= lhs; }
-Vector3 operator*(const float lhs, Vector3 rhs) { return rhs *= lhs; }
-Vector3 operator/(const float lhs, Vector3 rhs) { return rhs /= lhs; }
-Vector3 operator+(Vector3 lhs, const Vector3 rhs) { return lhs += rhs; }
-Vector3 operator-(Vector3 lhs, const Vector3 rhs) { return lhs -= rhs; }
+inline Vector3 operator-(Vector3 lhs, const float rhs) { return lhs -= rhs; }
+inline Vector3 operator*(Vector3 lhs, const float rhs) { return lhs *= rhs; }
+inline Vector3 operator/(Vector3 lhs, const float rhs) { return lhs /= rhs; }
+inline Vector3 operator+(const float lhs, Vector3 rhs) { return rhs += lhs; }
+inline Vector3 operator-(const float lhs, Vector3 rhs) { return rhs -= lhs; }
+inline Vector3 operator*(const float lhs, Vector3 rhs) { return rhs *= lhs; }
+inline Vector3 operator/(const float lhs, Vector3 rhs) { return rhs /= lhs; }
+inline Vector3 operator+(Vector3 lhs, const Vector3 rhs) { return lhs += rhs; }
+inline Vector3 operator-(Vector3 lhs, const Vector3 rhs) { return lhs -= rhs; }
 
-bool operator==(const Vector3 lhs, const Vector3 rhs)
+inline bool operator==(const Vector3 lhs, const Vector3 rhs)
 {
     return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z;
 }
 
-bool operator!=(const Vector3 lhs, const Vector3 rhs)
+inline bool operator!=(const Vector3 lhs, const Vector3 rhs)
 {
     return !(lhs == rhs);
 }
 
-std::string to_string(Vector3 a) {
+inline std::string to_string(Vector3 a) {
     return std::to_string(a.x) + std::string(", ") + std::to_string(a.y) + std::string(", ") + std::to_string(a.z);
 }
