@@ -39,6 +39,18 @@ python3 tools/symbol_validation/validate_symbols.py \
 
 Catatan: utilitas ini standalone dan tidak mengubah build utama.
 
+### Baseline dump kompatibilitas
+- Baseline validator saat ini: `com.mobile.legends_2.1.61.11705.cs` (rilis `v2`, 2026-03-31).
+- Contoh validasi baseline:
+  ```bash
+  python3 tools/symbol_validation/validate_symbols.py \
+    --dump /tmp/com.mobile.legends_2.1.61.11705.cs \
+    --report-json reports/release_2.1.61.11705_symbol_report.json \
+    --report-txt reports/release_2.1.61.11705_symbol_report.txt
+  ```
+- Hasil baseline saat ini: `FOUND=66`, `MISSING=6`, `SIGNATURE_MISMATCH=0`.
+- Daftar `MISSING` baseline: `AntiCheatReporter::.ctor`, `AntiCheatReporter::.cctor`, `BattleBridge::Instance`, `BattleBridge::bStartBattle`, `BattleBridge::OnSignReport`, `ACInterface::LoadCert`.
+
 ## Cara kerja fitur Anti AFK (tab Setting)
 
 Fitur **Anti AFK (AI Control)** berjalan sebagai **virtual pulse**, bukan klik/tap nyata:
