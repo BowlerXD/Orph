@@ -193,6 +193,19 @@ uint64_t g_AntiAfkDebugLastReasonEpochSec = 0;
 int g_AntiAfkDebugLastReason = ANTI_AFK_SKIP_NONE;
 bool g_AntiAfkDebugInMatchNow = false;
 bool g_AntiAfkDebugPopupVisibleNow = false;
+bool g_AntiAfkSetAIControlShowAfkInfo = false;
+bool g_AntiAfkSetAIControlShowAsk = false;
+uint32_t g_AntiAfkSetAIControlAskEndTime = 0;
+std::chrono::steady_clock::time_point g_AntiAfkSetAIControlLastCall = std::chrono::steady_clock::time_point::min();
+
+void (*oBattleBridge_SetAIControl)(void *, bool, int, uint32_t, bool, uint32_t);
+void BattleBridge_SetAIControl_Hook(void *thiz, bool showAfkInfo, int afkHeroId, uint32_t afkPlayerId, bool showAsk, uint32_t askEndTime) {
+    g_AntiAfkSetAIControlShowAfkInfo = showAfkInfo;
+    g_AntiAfkSetAIControlShowAsk = showAsk;
+    g_AntiAfkSetAIControlAskEndTime = askEndTime;
+    g_AntiAfkSetAIControlLastCall = std::chrono::steady_clock::now();
+    oBattleBridge_SetAIControl(thiz, showAfkInfo, afkHeroId, afkPlayerId, showAsk, askEndTime);
+}
 
 inline void ResetAntiAfkDebugCounters() {
     g_AntiAfkDebugTickCalls = 0;
@@ -207,6 +220,10 @@ inline void ResetAntiAfkDebugCounters() {
     g_AntiAfkDebugLastReason = ANTI_AFK_SKIP_NONE;
     g_AntiAfkDebugInMatchNow = false;
     g_AntiAfkDebugPopupVisibleNow = false;
+    g_AntiAfkSetAIControlShowAfkInfo = false;
+    g_AntiAfkSetAIControlShowAsk = false;
+    g_AntiAfkSetAIControlAskEndTime = 0;
+    g_AntiAfkSetAIControlLastCall = std::chrono::steady_clock::time_point::min();
     g_LastAntiAfkPulse = std::chrono::steady_clock::time_point::min();
 }
 
@@ -313,6 +330,20 @@ static inline void TickVirtualAntiAfk(bool inMatch) {
     }
 
     if (!afkPopupVisibleNow) {
+        auto stayUiTipTimeOffset = ShowAFKComp_uStayUITipTime();
+        if (stayUiTipTimeOffset) {
+            afkPopupVisibleNow = (*(uint32_t *)((uintptr_t)afkComp + stayUiTipTimeOffset)) > 0;
+        }
+    }
+
+    if (!afkPopupVisibleNow) {
+        auto openShopTimeOffset = ShowAFKComp_uOpenShopTime();
+        if (openShopTimeOffset) {
+            afkPopupVisibleNow = (*(uint32_t *)((uintptr_t)afkComp + openShopTimeOffset)) > 0;
+        }
+    }
+
+    if (!afkPopupVisibleNow) {
         auto waitTurnAiOffset = ShowPlayer_m_bWaitTurnAI();
         if (waitTurnAiOffset) {
             afkPopupVisibleNow = *(bool *)((uintptr_t)localPlayerShow + waitTurnAiOffset);
@@ -335,6 +366,15 @@ static inline void TickVirtualAntiAfk(bool inMatch) {
             if (afkTurnAiComp) {
                 auto fn = reinterpret_cast<bool (*)(void *)>(afkTurnAiCompGetter);
                 afkPopupVisibleNow = fn((void *)afkTurnAiComp);
+            }
+        }
+    }
+
+    if (!afkPopupVisibleNow) {
+        if (g_AntiAfkSetAIControlShowAfkInfo || g_AntiAfkSetAIControlShowAsk) {
+            auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - g_AntiAfkSetAIControlLastCall).count();
+            if (elapsedMs >= 0 && elapsedMs <= 15000) {
+                afkPopupVisibleNow = true;
             }
         }
     }

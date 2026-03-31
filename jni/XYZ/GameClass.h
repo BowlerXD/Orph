@@ -402,6 +402,10 @@ uintptr_t BattleBridge_UpdateBloodPos(){
 	return (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "BattleBridge", "UpdateBloodPos", 2);
 }
 
+uintptr_t BattleBridge_SetAIControl() {
+	return (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "BattleBridge", "SetAIControl", 5);
+}
+
 uintptr_t BattleManager_m_LocalPlayerShow(){
 	return (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "BattleManager", "m_LocalPlayerShow");
 }
@@ -441,6 +445,14 @@ uintptr_t ShowAFKComp_get_m_bStayUITooLong() {
 
 uintptr_t ShowAFKComp_get_m_StayShopTooLong() {
 	return (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowAFKComp", "get_m_StayShopTooLong", 0);
+}
+
+uintptr_t ShowAFKComp_uStayUITipTime() {
+	return (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "ShowAFKComp", "uStayUITipTime");
+}
+
+uintptr_t ShowAFKComp_uOpenShopTime() {
+	return (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "ShowAFKComp", "uOpenShopTime");
 }
 
 uintptr_t ShowPlayer_m_bWaitTurnAI() {
