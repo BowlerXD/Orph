@@ -1,4 +1,5 @@
 //method
+#pragma once
 #include <cstdint>
 #include <cstring>
 #include "Unity/Struct/Vector3.hpp"
