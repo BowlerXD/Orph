@@ -2,6 +2,13 @@
 #ifndef ANDROID_MOD_MENU_MACROS_H
 #define ANDROID_MOD_MENU_MACROS_H
 
+#include <algorithm>
+#include <cstdint>
+#include <string>
+#include <vector>
+
+#include "../KittyMemory/MemoryPatch.h"
+
 #if defined(__aarch64__) //Compile for arm64 lib only
 #include <Substrate/And64InlineHook/And64InlineHook.hpp>
 
