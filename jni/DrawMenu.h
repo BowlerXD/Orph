@@ -67,11 +67,11 @@ void loadConfig() {
         close(fd);
         return;
     }
-    if (read(fd, &SetFieldOfView, sizeof(SetFieldOfView)) != (ssize_t)sizeof(SetFieldOfView)) {
+    if (read(fd, &ConfigState::GetCameraState().setFieldOfView, sizeof(ConfigState::GetCameraState().setFieldOfView)) != (ssize_t)sizeof(ConfigState::GetCameraState().setFieldOfView)) {
         close(fd);
         return;
     }
-    if (read(fd, &sliderValue, sizeof(sliderValue)) != (ssize_t)sizeof(sliderValue)) {
+    if (read(fd, &ConfigState::GetCameraState().sliderValue, sizeof(ConfigState::GetCameraState().sliderValue)) != (ssize_t)sizeof(ConfigState::GetCameraState().sliderValue)) {
         close(fd);
         return;
     }
@@ -97,8 +97,8 @@ void saveConfig(){
 
     write(fd, &Config , sizeof(Config));
     write(fd, &Aim, sizeof(Aim));
-    write(fd, &SetFieldOfView, sizeof(SetFieldOfView));
-    write(fd, &sliderValue, sizeof(sliderValue));
+    write(fd, &ConfigState::GetCameraState().setFieldOfView, sizeof(ConfigState::GetCameraState().setFieldOfView));
+    write(fd, &ConfigState::GetCameraState().sliderValue, sizeof(ConfigState::GetCameraState().sliderValue));
 
     PersistedMaphackAdjustments persisted{};
 
@@ -387,7 +387,7 @@ void DrawMenu() {
 		                }
                     if (ImGui::CollapsingHeader("Drone View")) {
                         ImGui::PushItemWidth(-1);
-                        ImGui::SliderFloat("##DroneHorizontalSlider", &sliderValue, -10.0f, 50.0f, "Horizontal View %.1f");
+                        ImGui::SliderFloat("##DroneHorizontalSlider", &ConfigState::GetCameraState().sliderValue, -10.0f, 50.0f, "Horizontal View %.1f");
                         ImGui::PopItemWidth();
                     }
 	                ImGui::EndTabItem();

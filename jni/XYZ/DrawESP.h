@@ -77,31 +77,31 @@ static void *ResetCameraParm() {
 void (*oSetCameraParam)(void *instance, Vector3 offsetPt, Quaternion qua, Transform tarObj, bool bLerp);
 void SetCameraParam(void *ins, Vector3 offsetPt, Quaternion qua, Transform tarObj, bool bLerp) {
     Vector3 baruNich = offsetPt;
-    if (sliderValue > 0) {   
+    if (ConfigState::GetCameraState().sliderValue > 0) {
         if (offsetPt.x <= 0.0)
-            baruNich.x = offsetPt.x + (float) sliderValue * -0.234;
+            baruNich.x = offsetPt.x + (float) ConfigState::GetCameraState().sliderValue * -0.234;
         else
-            baruNich.x = offsetPt.x + (float) sliderValue * 0.234;
-        baruNich.y = offsetPt.y + (float) sliderValue * -0.307;
+            baruNich.x = offsetPt.x + (float) ConfigState::GetCameraState().sliderValue * 0.234;
+        baruNich.y = offsetPt.y + (float) ConfigState::GetCameraState().sliderValue * -0.307;
         if (offsetPt.z <= 0.0)
-            baruNich.z = offsetPt.z + (float) sliderValue * -0.235;
+            baruNich.z = offsetPt.z + (float) ConfigState::GetCameraState().sliderValue * -0.235;
         else
-            baruNich.z = offsetPt.z + (float) sliderValue * 0.235;
+            baruNich.z = offsetPt.z + (float) ConfigState::GetCameraState().sliderValue * 0.235;
     }  
 oSetCameraParam(ins, baruNich, qua, tarObj, bLerp);
 }*/
 void DroneView() {
-    if (GetFieldOfView == 0) {
-        GetFieldOfView = get_fieldOfView();
-        if (GetFieldOfView <= 1.0f) {
-            GetFieldOfView = 60.0f;
+    if (ConfigState::GetCameraState().getFieldOfView == 0) {
+        ConfigState::GetCameraState().getFieldOfView = get_fieldOfView();
+        if (ConfigState::GetCameraState().getFieldOfView <= 1.0f) {
+            ConfigState::GetCameraState().getFieldOfView = 60.0f;
         }
     }
 
-    if (sliderValue < -10.0f) sliderValue = -10.0f;
-    if (sliderValue > 50.0f) sliderValue = 50.0f;
+    if (ConfigState::GetCameraState().sliderValue < -10.0f) ConfigState::GetCameraState().sliderValue = -10.0f;
+    if (ConfigState::GetCameraState().sliderValue > 50.0f) ConfigState::GetCameraState().sliderValue = 50.0f;
 
-    float targetFov = GetFieldOfView + SetFieldOfView + sliderValue;
+    float targetFov = ConfigState::GetCameraState().getFieldOfView + ConfigState::GetCameraState().setFieldOfView + ConfigState::GetCameraState().sliderValue;
     if (targetFov < 20.0f) targetFov = 20.0f;
     if (targetFov > 140.0f) targetFov = 140.0f;
     set_fieldOfView(targetFov);
@@ -186,7 +186,7 @@ void _ShowPlayer_Unity_OnUpdate(void* thisz){
 void (*oLogicPlayer_Update)(void* thisz, int status);
 void LogicPlayer_Update(void* thisz, int status){
 	if (thisz != NULL){
-		if(UpdateManiacStatus){
+		if(ConfigState::GetEspState().updateManiacStatus){
 			*(int *) ((uintptr_t) thisz + LogicPlayer__QuadraKillTimes) = 1234;
 		}
 	}
@@ -196,7 +196,7 @@ void LogicPlayer_Update(void* thisz, int status){
 void (*set_QuadraKillTimes)(void* thisz, int status);
 void oset_QuadraKillTimes(void* thisz, int status){
 	if (thisz != NULL){
-		if (UpdateManiacStatus){
+		if (ConfigState::GetEspState().updateManiacStatus){
 			set_QuadraKillTimes(thisz, 1234);
             return;
 		}
@@ -206,7 +206,7 @@ void oset_QuadraKillTimes(void* thisz, int status){
 
 double (*orig_get_m_AttkSpeed)(void* thiz);
 double get_m_AttkSpeed(void* thiz){
-	if (thiz != NULL && UpdateManiacStatus){
+	if (thiz != NULL && ConfigState::GetEspState().updateManiacStatus){
 		return 123456;
 	}
     return orig_get_m_AttkSpeed(thiz);
@@ -727,7 +727,7 @@ void NewDrawESP(ImDrawList *draw, float screenWidth, float screenHeight) {
         return;
     }
 
-    if (sliderValue != 0.0f || SetFieldOfView != 0.0f) {
+    if (ConfigState::GetCameraState().sliderValue != 0.0f || ConfigState::GetCameraState().setFieldOfView != 0.0f) {
         DroneView();
     }
     
