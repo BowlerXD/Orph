@@ -15,7 +15,7 @@ from typing import Dict, List, Optional, Set, Tuple
 METHOD_DECL_RE = re.compile(
     r"^\s*(?:\[[^\]]+\]\s*)*(?:public|private|protected|internal)\s+"
     r"(?:static\s+|virtual\s+|override\s+|sealed\s+|extern\s+|unsafe\s+|new\s+|abstract\s+|partial\s+)*"
-    r"[\w<>,\[\]\.\?\s]+\s+([A-Za-z_]\w*)\s*\(([^)]*)\)"
+    r"[\w<>,\[\]\.\?\s]+\s+([A-Za-z_][\w]*|\.[A-Za-z_][\w]*)\s*\(([^)]*)\)"
 )
 
 FIELD_DECL_RE = re.compile(
