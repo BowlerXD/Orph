@@ -431,6 +431,18 @@ uintptr_t ShowAFKComp_m_bStayTooLongTipShow() {
 	return (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "ShowAFKComp", "m_bStayTooLongTipShow");
 }
 
+uintptr_t ShowAFKComp_get_m_bStayUITooLong() {
+	return (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowAFKComp", "get_m_bStayUITooLong", 0);
+}
+
+uintptr_t ShowAFKComp_get_m_StayShopTooLong() {
+	return (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowAFKComp", "get_m_StayShopTooLong", 0);
+}
+
+uintptr_t ShowPlayer_m_bWaitTurnAI() {
+	return (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "ShowPlayer", "m_bWaitTurnAI");
+}
+
 //Class PlayerData (retri req)
 uintptr_t PlayerData__killNum(){
 	return (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "PlayerData", "_killNum");

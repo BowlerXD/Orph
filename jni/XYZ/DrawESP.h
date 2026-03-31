@@ -287,8 +287,35 @@ static inline void TickVirtualAntiAfk(bool inMatch) {
         return;
     }
 
+    bool afkPopupVisibleNow = false;
     auto afkTipShowOffset = ShowAFKComp_m_bStayTooLongTipShow();
-    bool afkPopupVisibleNow = afkTipShowOffset && *(bool *)((uintptr_t)afkComp + afkTipShowOffset);
+    if (afkTipShowOffset) {
+        afkPopupVisibleNow = *(bool *)((uintptr_t)afkComp + afkTipShowOffset);
+    }
+
+    if (!afkPopupVisibleNow) {
+        auto getStayUiTooLong = ShowAFKComp_get_m_bStayUITooLong();
+        if (getStayUiTooLong) {
+            auto fn = reinterpret_cast<bool (*)(void *)>(getStayUiTooLong);
+            afkPopupVisibleNow = fn((void *)afkComp);
+        }
+    }
+
+    if (!afkPopupVisibleNow) {
+        auto getStayShopTooLong = ShowAFKComp_get_m_StayShopTooLong();
+        if (getStayShopTooLong) {
+            auto fn = reinterpret_cast<bool (*)(void *)>(getStayShopTooLong);
+            afkPopupVisibleNow = fn((void *)afkComp);
+        }
+    }
+
+    if (!afkPopupVisibleNow) {
+        auto waitTurnAiOffset = ShowPlayer_m_bWaitTurnAI();
+        if (waitTurnAiOffset) {
+            afkPopupVisibleNow = *(bool *)((uintptr_t)localPlayerShow + waitTurnAiOffset);
+        }
+    }
+
     g_AntiAfkDebugPopupVisibleNow = afkPopupVisibleNow;
     if (!afkPopupVisibleNow) {
         AntiAfkDebugSetReason(ANTI_AFK_SKIP_AI_CONTROL_OFF, nowSec);
