@@ -171,8 +171,9 @@ void _ShowPlayer_Unity_OnUpdate(void* thisz){
 }
 
 static std::chrono::steady_clock::time_point g_LastAntiAfkPulse = std::chrono::steady_clock::time_point::min();
-static std::chrono::steady_clock::time_point g_AntiAfkToggleEnabledSince = std::chrono::steady_clock::time_point::min();
+static std::chrono::steady_clock::time_point g_AntiAfkMatchEnteredSince = std::chrono::steady_clock::time_point::min();
 static bool g_AntiAfkPrevToggleState = false;
+static bool g_AntiAfkPrevInMatchState = false;
 
 using ShowSelfPlayerTryUseSkill9Fn = int (*)(void *, int, Vector3, bool, Vector3, bool, bool, bool, bool, uint32_t);
 
@@ -181,21 +182,32 @@ static inline void TickVirtualAntiAfk(bool inMatch) {
 
     if (!Config.AntiAfkOnAIControl) {
         g_AntiAfkPrevToggleState = false;
-        g_AntiAfkToggleEnabledSince = std::chrono::steady_clock::time_point::min();
+        g_AntiAfkPrevInMatchState = false;
+        g_AntiAfkMatchEnteredSince = std::chrono::steady_clock::time_point::min();
         g_LastAntiAfkPulse = std::chrono::steady_clock::time_point::min();
         return;
     }
 
     if (!g_AntiAfkPrevToggleState) {
         g_AntiAfkPrevToggleState = true;
-        g_AntiAfkToggleEnabledSince = now;
     }
 
     if (!inMatch) {
+        g_AntiAfkPrevInMatchState = false;
         return;
     }
 
-    if (std::chrono::duration_cast<std::chrono::milliseconds>(now - g_AntiAfkToggleEnabledSince).count() < 40000) {
+    if (!g_AntiAfkPrevInMatchState) {
+        g_AntiAfkPrevInMatchState = true;
+        g_AntiAfkMatchEnteredSince = now;
+        g_LastAntiAfkPulse = std::chrono::steady_clock::time_point::min();
+    }
+
+    if (g_AntiAfkMatchEnteredSince == std::chrono::steady_clock::time_point::min()) {
+        g_AntiAfkMatchEnteredSince = now;
+    }
+
+    if (std::chrono::duration_cast<std::chrono::milliseconds>(now - g_AntiAfkMatchEnteredSince).count() < 40000) {
         return;
     }
 
