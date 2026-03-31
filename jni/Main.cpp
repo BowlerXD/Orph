@@ -14,11 +14,37 @@
 #include "Config/JNIStuff.h"
 #include "XYZ/DrawMinimap.h"
 #include "Hooks.h"
+#include "Includes/Logger.h"
 
 bool FileExists(const std::string &filename) {
     std::ifstream file(filename);
     return file.good();
 }
+
+namespace {
+std::string BuildAppLibsBasePath(const std::string &pkg) {
+    return "/data/user/0/" + pkg + "/app_libs/";
+}
+
+std::string BuildAssetSourceBasePath(const std::string &pkg) {
+    return "/sdcard/Android/data/" + pkg + "/files/dragon2017/assets/comlibs/" + std::string(ARCH) + "/";
+}
+
+void *TryDlopenWithLog(const std::string &payloadName, const std::string &path, const char *label) {
+    dlerror();
+    void *handle = dlopen(path.c_str(), RTLD_LAZY);
+    const char *error = dlerror();
+
+    if (handle) {
+        LOG_WRITE_FILE("INFO", "[JNI_OnLoad][%s] dlopen %s success: %s", payloadName.c_str(), label, path.c_str());
+    } else {
+        LOG_WRITE_FILE("ERROR", "[JNI_OnLoad][%s] dlopen %s failed: %s | err=%s",
+                       payloadName.c_str(), label, path.c_str(), error ? error : "unknown");
+    }
+
+    return handle;
+}
+} // namespace
 
 void *main_thread(void *) {
     while (!m_IL2CPP) {
@@ -43,30 +69,47 @@ void *g_Il2CppInitFunc, *g_Il2CppSymFunc;
 jint(JNICALL *Real_JNI_OnLoad)(JavaVM * vm, void *reserved);
 JNIEXPORT jint JNICALL Call_JNI_OnLoad(JavaVM *vm, void *reserved) {
     std::string apkPkg = getPackageName(GetJNIEnv(g_vm));
+    std::string appLibsPrefix = BuildAppLibsBasePath(apkPkg);
+    std::string sourcePrefix = BuildAssetSourceBasePath(apkPkg);
     std::vector<std::string> payloadNames = {
             "libAkSoundEngine+.bytes",
             "libAkSoundEngine+.so"
     };
 
     for (const auto &payloadName : payloadNames) {
-        std::string localPath = std::string("/data/user/0/") + apkPkg.c_str() + std::string("/app_libs/") + payloadName;
-        if (!g_Il2CppInitFunc && FileExists(localPath)) {
-            g_Il2CppInitFunc = dlopen(localPath.c_str(), RTLD_LAZY);
+        std::string localPath = appLibsPrefix + payloadName;
+        std::string sourcePath = sourcePrefix + payloadName;
+        bool localExists = FileExists(localPath);
+
+        LOG_WRITE_FILE("INFO", "[JNI_OnLoad][%s] local=%s source=%s local_exists=%s",
+                       payloadName.c_str(), localPath.c_str(), sourcePath.c_str(), localExists ? "true" : "false");
+
+        if (!localExists) {
+            bool sourceExists = FileExists(sourcePath);
+            if (sourceExists) {
+                CopyFile(sourcePath.c_str(), localPath.c_str());
+                localExists = FileExists(localPath);
+                LOG_WRITE_FILE("INFO", "[JNI_OnLoad][%s] copied source->local result=%s",
+                               payloadName.c_str(), localExists ? "success" : "failed");
+            } else {
+                LOG_WRITE_FILE("WARN", "[JNI_OnLoad][%s] source missing, skip copy: %s",
+                               payloadName.c_str(), sourcePath.c_str());
+            }
         }
 
+        if (!g_Il2CppInitFunc && localExists) {
+            g_Il2CppInitFunc = TryDlopenWithLog(payloadName, localPath, "local");
+        }
         if (!g_Il2CppInitFunc) {
-            std::string fromPath = std::string("/sdcard/Android/data/") + apkPkg.c_str() + std::string("/files/dragon2017/assets/comlibs/") + std::string(ARCH) + std::string("/") + payloadName;
-            std::string toPath = std::string("/data/user/0/") + apkPkg.c_str() + std::string("/app_libs/") + payloadName;
-            CopyFile(fromPath.c_str(), toPath.c_str());
-            if (!g_Il2CppInitFunc)
-                g_Il2CppInitFunc = dlopen(toPath.c_str(), RTLD_LAZY);
-            if (!g_Il2CppInitFunc)
-                g_Il2CppInitFunc = dlopen(fromPath.c_str(), RTLD_LAZY);
+            g_Il2CppInitFunc = TryDlopenWithLog(payloadName, sourcePath, "source");
         }
 
         if (g_Il2CppInitFunc) {
+            LOG_WRITE_FILE("INFO", "[JNI_OnLoad][%s] payload selected", payloadName.c_str());
             break;
         }
+
+        LOG_WRITE_FILE("WARN", "[JNI_OnLoad][%s] payload failed (local+source)", payloadName.c_str());
     }
 
     if (!g_Il2CppInitFunc) {
