@@ -244,6 +244,23 @@ static inline void TickVirtualAntiAfk(bool inMatch) {
                 moveDir->z = 0.0125f;
             }
         }
+
+        // dump v2: ShowSelfPlayer has explicit movement/activity methods.
+        uintptr_t sendWeakNetActivity = ShowSelfPlayer_SendWeakNetActivity2Logic;
+        if (sendWeakNetActivity) {
+            auto sendFn = reinterpret_cast<ShowSelfPlayerSendWeakNetActivity2LogicFn>(sendWeakNetActivity);
+            sendFn((void *)localPlayerShow);
+        }
+        uintptr_t tryMove = ShowSelfPlayer_TryMove;
+        if (tryMove) {
+            auto tryMoveFn = reinterpret_cast<ShowSelfPlayerTryMoveFn>(tryMove);
+            tryMoveFn((void *)localPlayerShow, 0);
+        }
+        uintptr_t unityChangeMove = ShowSelfPlayer_Unity_ChangeMove;
+        if (unityChangeMove) {
+            auto changeMoveFn = reinterpret_cast<ShowSelfPlayerUnityChangeMoveFn>(unityChangeMove);
+            changeMoveFn((void *)localPlayerShow);
+        }
         g_LastAntiAfkMoveHeartbeat = now;
     }
 
