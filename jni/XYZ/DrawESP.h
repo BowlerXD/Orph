@@ -159,7 +159,10 @@ void (*orig_ShowEntity__OnUpdate)(ShowEntity *showEntity);
 void _ShowEntity__OnUpdate(ShowEntity *showEntity) {
     if (showEntity != nullptr){
         if (Config.Visual.MapHackIcon2) {
-			*(bool *) (showEntity + Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "ShowEntity", "m_bUnityMinimapVisible")) = Config.Visual.MapHackIcon2;
+            static const uintptr_t kMinimapVisibleOffset = (uintptr_t)Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "ShowEntity", "m_bUnityMinimapVisible");
+            if (kMinimapVisibleOffset) {
+			    *(bool *) (showEntity + kMinimapVisibleOffset) = Config.Visual.MapHackIcon2;
+            }
         }
     }
     orig_ShowEntity__OnUpdate(showEntity);
@@ -217,19 +220,25 @@ DefineHook(void, UpdateMapHack, (void * pThis)) {
                 bFullChecked = true;
             }
             if (BattleManager_Instance) {
-                auto m_ShowPlayers = *(List<void **> **) ((uintptr_t)BattleManager_Instance + BattleManager_m_ShowPlayers());
+                static const uintptr_t kSameCampOffset = EntityBase_m_bSameCampType();
+                static const uintptr_t kDeathOffset = EntityBase_m_bDeath();
+                static const uintptr_t kCanSightOffset = EntityBase_canSight();
+                static const uintptr_t kGuidOffset = EntityBase_m_uGuid();
+                static const uintptr_t kPosOffset = ShowEntity__Position();
+                static const uintptr_t kShowPlayersOffset = BattleManager_m_ShowPlayers();
+                auto m_ShowPlayers = *(List<void **> **) ((uintptr_t)BattleManager_Instance + kShowPlayersOffset);
                 if (m_ShowPlayers) {
                     for (int i = 0; i < m_ShowPlayers->getSize(); i++) {
                         auto Pawn = m_ShowPlayers->getItems()[i];               
                         if (!Pawn) continue;
-                        auto m_bSameCampType = *(bool *) ((uintptr_t)Pawn + EntityBase_m_bSameCampType());
+                        auto m_bSameCampType = *(bool *) ((uintptr_t)Pawn + kSameCampOffset);
                         if (m_bSameCampType) continue;
-                        auto m_bDeath = *(bool *) ((uintptr_t)Pawn + EntityBase_m_bDeath());
+                        auto m_bDeath = *(bool *) ((uintptr_t)Pawn + kDeathOffset);
                         if (m_bDeath) continue;
-                        auto canSight = *(bool *) ((uintptr_t)Pawn + EntityBase_canSight());
+                        auto canSight = *(bool *) ((uintptr_t)Pawn + kCanSightOffset);
                         if (canSight) continue;
-                        auto m_uGuid = *(int *) ((uintptr_t)Pawn + EntityBase_m_uGuid());
-                        auto _Position = *(Vector3 *) ((uintptr_t)Pawn + ShowEntity__Position());
+                        auto m_uGuid = *(int *) ((uintptr_t)Pawn + kGuidOffset);
+                        auto _Position = *(Vector3 *) ((uintptr_t)Pawn + kPosOffset);
                         auto *m_HeadIcon = *(String **) ((uintptr_t) Pawn + ShowEntity_m_HeadIcon);
 						if (Config.Visual.MapHackIcon2){
 							auto CanSightMapHack = (void (*)(void *, Vector3)) (ShowEntity_CanSight);
@@ -701,9 +710,6 @@ void NewDrawESP(ImDrawList *draw, float screenWidth, float screenHeight) {
         draw->AddText(NULL, ((float) screenHeight / 39.0f), {(float)(screenWidth / 4.0f) - (textSize.x / 2), (float)(screenHeight - screenHeight) + (float)(screenHeight / 8.7f)}, IM_COL32(10, 255, 202, 255), sFPS.c_str());
     }
     fps.update();
-    int minimapSoldierOverlayCount = 0;
-    int minimapJungleOverlayCount = 0;
-
     void *battleBridgeInstance = nullptr, *battleManagerInstance = nullptr;
     Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleData", "m_BattleBridge", &battleBridgeInstance);
     Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
@@ -722,14 +728,18 @@ void NewDrawESP(ImDrawList *draw, float screenWidth, float screenHeight) {
     
     auto battleManager = (uintptr_t) battleManagerInstance;
     if (!battleManager) return;
+    static const uintptr_t kLocalPlayerShowOffset = BattleManager_m_LocalPlayerShow();
+    static const uintptr_t kMonsterDictOffset = BattleManager_m_dicMonsterShow();
+    static const uintptr_t kPlayerDictOffset = BattleManager_m_dicPlayerShow();
+    static const uintptr_t kEntityPosOffset = ShowEntity__Position();
     /*self*/
-    auto m_LocalPlayerShow = *(uintptr_t *) ((uintptr_t)battleManager + BattleManager_m_LocalPlayerShow());
+    auto m_LocalPlayerShow = *(uintptr_t *) ((uintptr_t)battleManager + kLocalPlayerShowOffset);
     if (!m_LocalPlayerShow) return;
-    auto selfPos = *(Vector3 *) ((uintptr_t)m_LocalPlayerShow + ShowEntity__Position());
+    auto selfPos = *(Vector3 *) ((uintptr_t)m_LocalPlayerShow + kEntityPosOffset);
     auto selfCampType = *(int *) ((uintptr_t)m_LocalPlayerShow + EntityBase_m_EntityCampType());
     auto selfPosVec2 = getPosVec2(selfPos, screenWidth, screenHeight);
     /*monster*/
-    auto m_dicMonsterShow = *(Dictionary<int, uintptr_t> **) ((uintptr_t)battleManager + BattleManager_m_dicMonsterShow());
+    auto m_dicMonsterShow = *(Dictionary<int, uintptr_t> **) ((uintptr_t)battleManager + kMonsterDictOffset);
     if (!m_dicMonsterShow) return;
 
     for (int i = 0; i < m_dicMonsterShow->getNumKeys(); i++) {
@@ -746,7 +756,7 @@ void NewDrawESP(ImDrawList *draw, float screenWidth, float screenHeight) {
         auto m_Hp = *(int *) ((uintptr_t)values + EntityBase_m_Hp());
         auto m_HpMax = *(int *) ((uintptr_t)values + EntityBase_m_HpMax());
         //if (bShowEntityLayer && m_Hp != m_HpMax) continue;
-        auto _Position = *(Vector3 *) ((uintptr_t)values + ShowEntity__Position());
+        auto _Position = *(Vector3 *) ((uintptr_t)values + kEntityPosOffset);
         auto rootPosVec2 = getPosVec2(_Position, screenWidth, screenHeight);
 
         bool isSoldier = *(bool *) ((uintptr_t)values + ShowEntity_IsSoldier);
@@ -765,7 +775,6 @@ void NewDrawESP(ImDrawList *draw, float screenWidth, float screenHeight) {
             if (Config.MinimapMonsterIcon && isJungleMonster && !IsExcludedJungleObjective(jungleTypeId) && !isVisible) {
                 ImVec2 junglePos(minimapPosJungle.x, minimapPosJungle.y);
                 DrawJungleMinimapMarker(draw, junglePos, jungleTypeId);
-                minimapJungleOverlayCount++;
             }
 
             // Hero minimap icon is drawn with overlay; keep minion consistent with overlay path.
@@ -773,7 +782,6 @@ void NewDrawESP(ImDrawList *draw, float screenWidth, float screenHeight) {
                 ImVec2 soldierPos(minimapPosEntity.x, minimapPosEntity.y);
                 // Match native minimap dot style (solid red dot, no white border).
                 draw->AddCircleFilled(soldierPos, 2.9f, IM_COL32(255, 70, 70, 245), 12);
-                minimapSoldierOverlayCount++;
             }
         }
 
@@ -837,7 +845,7 @@ void NewDrawESP(ImDrawList *draw, float screenWidth, float screenHeight) {
 	
 	
 	
-    auto m_dicPlayerShow = *(Dictionary<int, uintptr_t> **) ((uintptr_t)battleManager + BattleManager_m_dicPlayerShow());
+    auto m_dicPlayerShow = *(Dictionary<int, uintptr_t> **) ((uintptr_t)battleManager + kPlayerDictOffset);
     if (!m_dicPlayerShow) return;
     for (int i = 0; i < m_dicPlayerShow->getNumKeys(); i++) {
         auto keys = m_dicPlayerShow->getKeys()[i];
@@ -851,7 +859,7 @@ void NewDrawESP(ImDrawList *draw, float screenWidth, float screenHeight) {
         auto m_Hp = *(int *) ((uintptr_t)values + EntityBase_m_Hp());
         auto m_HpMax = *(int *) ((uintptr_t)values + EntityBase_m_HpMax());
         auto sPell = *(int *) ((uintptr_t)values + ShowPlayer_m_iSummonSkillId());
-        auto _Position = *(Vector3 *) ((uintptr_t)values + ShowEntity__Position());
+        auto _Position = *(Vector3 *) ((uintptr_t)values + kEntityPosOffset);
         auto rootPosVec2 = getPosVec2(_Position, screenWidth, screenHeight);
         auto spellDrawing = ImVec2(rootPosVec2.x + 55, rootPosVec2.y - 15);
         auto *m_HeroName = *(String **) ((uintptr_t)values + ShowPlayer_m_HeroName());
