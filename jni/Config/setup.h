@@ -1,5 +1,8 @@
 #pragma once
 
+#include <android/native_window.h>
+#include "imgui.h"
+
 uintptr_t m_IL2CPP;
 bool g_Initialized;
 void *m_EGL;

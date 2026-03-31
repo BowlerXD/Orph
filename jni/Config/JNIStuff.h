@@ -1,5 +1,12 @@
 #pragma once
 
+#include <algorithm>
+#include <dirent.h>
+#include <fstream>
+#include <string>
+#include <unistd.h>
+#include <vector>
+
 #if defined(__aarch64__)
 #define ABI  "[x64]"
 #define ARCH "arm64-v8a"

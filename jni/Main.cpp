@@ -12,7 +12,8 @@
 #include "Tools/Tools.h"
 #include "Config/setup.h"
 #include "Config/JNIStuff.h"
-#include "XYZ/DrawMinimap.h"
+#include "XYZ/GameClass.h"
+#include "XYZ/DrawESP.h"
 #include "Hooks.h"
 #include "Includes/Logger.h"
 
