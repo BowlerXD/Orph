@@ -178,9 +178,6 @@ static bool g_AntiAfkPrevInMatchState = false;
 
 using ShowSelfPlayerTryUseSkill9Fn = int (*)(void *, int, Vector3, bool, Vector3, bool, bool, bool, bool, uint32_t);
 using ShowSelfPlayerTryUseSkill12Fn = int (*)(void *, int *, int, Vector3, bool, Vector3, bool, bool, bool, uint32_t, bool, uint32_t, uint32_t);
-using ShowSelfPlayerTryMoveFn = int (*)(void *, int);
-using ShowSelfPlayerUnityChangeMoveFn = void (*)(void *);
-using ShowSelfPlayerSendWeakNetActivity2LogicFn = void (*)(void *);
 
 static inline void TickVirtualAntiAfk(bool inMatch) {
     auto now = std::chrono::steady_clock::now();
