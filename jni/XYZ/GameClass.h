@@ -1,6 +1,7 @@
 //method
 #include <cstdint>
 #include <cstring>
+#include "Unity/Struct/Vector3.hpp"
 
 typedef unsigned long dword;
 
