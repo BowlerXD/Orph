@@ -13,6 +13,8 @@ namespace Tools {
     bool PVM_WriteAddr(void *addr, void *buffer, size_t length);
 
     bool IsPtrValid(void *addr);
+    bool IsReadablePtr(void *addr, size_t length = 1);
+    bool IsWritablePtr(void *addr, size_t length = 1);
 
     uintptr_t GetBaseAddress(const char *name);
 	uintptr_t GetRealOffsets(const char *libraryName, uintptr_t relativeAddr);

@@ -7,6 +7,7 @@
 #include <sys/mman.h>
 #include <string>
 #include <random>
+#include <cstdio>
 
 #include "Tools.h"
 
@@ -30,6 +31,72 @@ pid_t target_pid = -1;
 #define getByte(x)              (getBits(x[0]) << 4 | getBits(x[1]))
 
 namespace {
+    struct ProcMapRegion {
+        uintptr_t start;
+        uintptr_t end;
+        bool readable;
+        bool writable;
+    };
+
+    bool ParseProcMapLine(const char *line, ProcMapRegion *region) {
+        if (line == nullptr || region == nullptr) {
+            return false;
+        }
+
+        uintptr_t start = 0;
+        uintptr_t end = 0;
+        char perms[5] = {};
+        if (sscanf(line, "%" SCNxPTR "-%" SCNxPTR " %4s", &start, &end, perms) != 3) {
+            return false;
+        }
+
+        region->start = start;
+        region->end = end;
+        region->readable = perms[0] == 'r';
+        region->writable = perms[1] == 'w';
+        return true;
+    }
+
+    bool IsAddressRangeMapped(void *addr, size_t length, bool requireRead, bool requireWrite) {
+        if (addr == nullptr || length == 0) {
+            return false;
+        }
+
+        const uintptr_t startAddr = reinterpret_cast<uintptr_t>(addr);
+        const uintptr_t endAddr = startAddr + length;
+        if (endAddr < startAddr) {
+            return false;
+        }
+
+        FILE *maps = fopen("/proc/self/maps", "r");
+        if (maps == nullptr) {
+            return false;
+        }
+
+        char line[512];
+        bool mapped = false;
+        while (fgets(line, sizeof(line), maps) != nullptr) {
+            ProcMapRegion region{};
+            if (!ParseProcMapLine(line, &region)) {
+                continue;
+            }
+
+            if (startAddr >= region.start && endAddr <= region.end) {
+                if (requireRead && !region.readable) {
+                    break;
+                }
+                if (requireWrite && !region.writable) {
+                    break;
+                }
+                mapped = true;
+                break;
+            }
+        }
+
+        fclose(maps);
+        return mapped;
+    }
+
     bool UnprotectPageForAddress(void *address) {
         const uintptr_t rawAddress = reinterpret_cast<uintptr_t>(address);
         const unsigned long pageSize = static_cast<unsigned long>(sysconf(_SC_PAGESIZE));
@@ -90,11 +157,15 @@ bool Tools::PVM_WriteAddr(void *addr, void *buffer, size_t length) {
 }
 
 bool Tools::IsPtrValid(void *addr) {
-    static int fd = -1;
-    if (fd == -1) {
-        fd = open("/dev/random", O_WRONLY);
-    }
-    return write(fd, addr, 4) >= 0;
+    return IsReadablePtr(addr);
+}
+
+bool Tools::IsReadablePtr(void *addr, size_t length) {
+    return IsAddressRangeMapped(addr, length, true, false);
+}
+
+bool Tools::IsWritablePtr(void *addr, size_t length) {
+    return IsAddressRangeMapped(addr, length, true, true);
 }
 
 uintptr_t Tools::GetBaseAddress(const char *name) {
