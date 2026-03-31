@@ -10,12 +10,28 @@
 
 #include "Tools/Il2Cpp.h"
 #include "Tools/Tools.h"
-#include "Config/setup.h"
-#include "Config/JNIStuff.h"
-#include "XYZ/GameClass.h"
-#include "XYZ/DrawESP.h"
 #include "Hooks.h"
 #include "Includes/Logger.h"
+
+extern uintptr_t m_IL2CPP;
+extern JavaVM *g_vm;
+extern void UpdateMapHack(void *pThis);
+extern void (*oUpdateMapHack)(void *pThis);
+JNIEnv *GetJNIEnv(JavaVM *vm);
+std::string getPackageName(JNIEnv *env);
+bool CopyFile(const char *in, const char *out);
+
+namespace {
+#if defined(__aarch64__)
+constexpr const char *kArch = "arm64-v8a";
+#else
+constexpr const char *kArch = "armeabi-v7a";
+#endif
+
+uintptr_t ResolveShowEntityOnUpdate() {
+    return (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowEntity", "Unity_OnUpdate", 0);
+}
+}
 
 bool FileExists(const std::string &filename) {
     std::ifstream file(filename);
@@ -28,7 +44,7 @@ std::string BuildAppLibsBasePath(const std::string &pkg) {
 }
 
 std::string BuildAssetSourceBasePath(const std::string &pkg) {
-    return "/sdcard/Android/data/" + pkg + "/files/dragon2017/assets/comlibs/" + std::string(ARCH) + "/";
+    return "/sdcard/Android/data/" + pkg + "/files/dragon2017/assets/comlibs/" + std::string(kArch) + "/";
 }
 
 void *TryDlopenWithLog(const std::string &payloadName, const std::string &path, const char *label) {
@@ -57,7 +73,7 @@ void *main_thread(void *) {
 
     DobbyInstrument(dlsym(RTLD_NEXT, "eglSwapBuffers"), eglSwapBuffers_handler);
 
-    uintptr_t showEntityOnUpdate = ShowEntity_OnUpdate;
+    uintptr_t showEntityOnUpdate = ResolveShowEntityOnUpdate();
     if (showEntityOnUpdate) {
         Tools::Hook((void *)showEntityOnUpdate, (void *)UpdateMapHack, (void **)&oUpdateMapHack);
     }
