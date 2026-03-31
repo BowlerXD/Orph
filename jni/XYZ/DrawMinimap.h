@@ -1,4 +1,5 @@
 #pragma once
+#include "IconMinimap/DrawIcon.h"
 
 // Define variables for minimap settings
 static float minimapPosX = 82.337;

@@ -2,6 +2,11 @@
 // Created by hasbi on 4/9/2023.
 //
 #pragma once
+#include <cmath>
+
+#include "Unity/Struct/Vector2.h"
+#include "Unity/Struct/Vector3.hpp"
+
 namespace Minimap {
     ImVec2 StartPos = {(float)105, (float)0};
     int MapSize = 341; //width & height
@@ -21,4 +26,3 @@ Vector2 WorldToMinimap(uint CampType, Vector3 HeroPosition) {
     Res1.y = (Res0.y * MapSize) + StartPos.y + MapSize / 2.f;
     return Res1;
 }
-
