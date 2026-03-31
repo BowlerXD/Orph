@@ -76,6 +76,7 @@ LOCAL_SRC_FILES := imgui/imgui.cpp    \
     xHook/xh_util.c \
     xHook/xh_version.c \
     SecurityChecks.cpp \
+    XYZ/ConfigState.cpp \
     Hooks.cpp \
     Render.cpp \
     Main.cpp

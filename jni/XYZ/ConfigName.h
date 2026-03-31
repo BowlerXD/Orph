@@ -1,5 +1,9 @@
 #pragma once
 
+#include "ConfigState.h"
+#include "Unity/Struct/Vector3.hpp"
+#include "../imgui/imgui.h"
+
 #define targetLib "liblogic.so"
 
 enum EThemeTarget {
@@ -11,95 +15,78 @@ enum EThemeTarget {
 };
 static float density = -1;
 
-auto ButtonPositionDis = 1500;
-auto ButtonPositionDis2 = 110;
-bool OpenLinkURL;
-bool ActiveESP;
-bool ActiveVipSkill;
-bool ButtonComboGusion;
-bool SetGrassLayerHook;
-bool EyeRangeHook;
-bool KimmyAttackJungle;
-//Button ImGui Combo
-bool GusionButton;
-bool PaquitoButton;
-bool KimmyButton;
-
-//End ImGui Combo
+inline constexpr int ButtonPositionDis = 1500;
+inline constexpr int ButtonPositionDis2 = 110;
 
 namespace Esp{
-	bool SkillsId;
+	extern bool SkillsId;
 }
-bool UpdateManiacStatus;
-bool ToggleRetri;
-int speedInt = 21;
-bool customTrigger;
 
 namespace Configs {
-	int EglWidth = 0;
-	int EglHeight = 0;
-    int DisplayWidth = 0;
-    int DisplayHeight = 0;
-    bool LoginValid = false;
-    bool Initialized = false;
-	bool ClearMouse = true;
-	bool ShowImGui = true;
+	extern int EglWidth;
+	extern int EglHeight;
+    extern int DisplayWidth;
+    extern int DisplayHeight;
+    extern bool LoginValid;
+    extern bool Initialized;
+	extern bool ClearMouse;
+	extern bool ShowImGui;
 };
 
-float CostumLagging = 15;
+extern float CostumLagging;
 
 namespace AutoSkills{
-	bool SoYou;
-	bool Lucas;
-	bool KimmyTriggerOnNew;
-	bool KimmyTrigger;
-	bool GusionTriggerRecall;
-	bool GusionTrigger;
-	bool KimmyCreep;
-	bool KimmyCreepTrigger;
-	bool VisibleCheck;
-	bool KimmyBasicAttack;
-	bool KimmyBasicAttackTrigger;
-	bool DyrothBugTest;
-	bool DyrothBugTrigger;
-	bool YssBugCall;
-	bool AluBugCall;
-	bool BeatrixBugTest;
-	bool YinBrustDamage;
-	bool BeatrixBugTrigger;
-	bool YinBugTrigger;
-	bool LaylaDamage;
-	bool LaylaTrigger;
-	bool AamonDamage;
-	bool AamonTrigger;
-	bool NovariaDamage;
-	bool NovariaTrigger;
-	bool HanabiDamage;
-	bool ArgusDamage;
-	bool FannyCable;
-	bool HanabiTrigger;
-	bool GusionDamage;
-	bool GusionBugTrigger;
-	bool JoyDoubleDamage;
-	bool JoyTrigger;
-	bool JoyDoubleDamage2;
-	bool JoyTrigger2;
-	bool JhonsonDmg;
-	bool JhonsonTrigger;
-	bool FredrinBug;
-	bool FredrinTrigger;
-	bool LesleyBug;
-	bool LesleyTrigger;
-	bool MinotaurBug;
-	bool MinotaurTrigger;
-	bool EsmeraldaBug;
-	bool EsmeraldaBug2;
-	bool EsmeraldaTrigger;
-	bool PaquitoTrigger;
-	bool CarmilaBug;
-	bool AldousBug;
-	bool KimmyFreeTrigger;
-	bool PharsaTriggetUlti;
+	extern bool SoYou;
+	extern bool Lucas;
+	extern bool KimmyTriggerOnNew;
+	extern bool KimmyTrigger;
+	extern bool GusionTriggerRecall;
+	extern bool GusionTrigger;
+	extern bool KimmyCreep;
+	extern bool KimmyCreepTrigger;
+	extern bool VisibleCheck;
+	extern bool KimmyBasicAttack;
+	extern bool KimmyBasicAttackTrigger;
+	extern bool DyrothBugTest;
+	extern bool DyrothBugTrigger;
+	extern bool YssBugCall;
+	extern bool AluBugCall;
+	extern bool BeatrixBugTest;
+	extern bool YinBrustDamage;
+	extern bool BeatrixBugTrigger;
+	extern bool YinBugTrigger;
+	extern bool LaylaDamage;
+	extern bool LaylaTrigger;
+	extern bool AamonDamage;
+	extern bool AamonTrigger;
+	extern bool NovariaDamage;
+	extern bool NovariaTrigger;
+	extern bool HanabiDamage;
+	extern bool ArgusDamage;
+	extern bool FannyCable;
+	extern bool HanabiTrigger;
+	extern bool GusionDamage;
+	extern bool GusionBugTrigger;
+	extern bool JoyDoubleDamage;
+	extern bool JoyTrigger;
+	extern bool JoyDoubleDamage2;
+	extern bool JoyTrigger2;
+	extern bool JhonsonDmg;
+	extern bool JhonsonTrigger;
+	extern bool FredrinBug;
+	extern bool FredrinTrigger;
+	extern bool LesleyBug;
+	extern bool LesleyTrigger;
+	extern bool MinotaurBug;
+	extern bool MinotaurTrigger;
+	extern bool EsmeraldaBug;
+	extern bool EsmeraldaBug2;
+	extern bool EsmeraldaTrigger;
+	extern bool PaquitoTrigger;
+	extern bool CarmilaBug;
+	extern bool AldousBug;
+	extern bool KimmyFreeTrigger;
+	extern bool PharsaTriggetUlti;
 };
 
 struct sAutoRetribution {
@@ -109,7 +96,7 @@ struct sAutoRetribution {
     bool litho;
 	float Custom = 7.0f;
 };
-sAutoRetribution AutoRetribution{0};
+extern sAutoRetribution AutoRetribution;
 
 struct sColorPick {
     float *Line;
@@ -119,18 +106,18 @@ struct sColorPick {
     float *Distance;
     float *Second;
 };
-sColorPick ColorPick{0};
+extern sColorPick ColorPick;
 
 struct sAutoTrigger {
     bool Retribution;
 };
-sAutoTrigger AutoTrigger{0};
+extern sAutoTrigger AutoTrigger;
 
 struct sAutoSkill {
     bool Lesley;
 	bool Lucas;
 };
-sAutoSkill AutoSkill{0};
+extern sAutoSkill AutoSkill;
 
 struct sAim {
     bool SelfPos;
@@ -284,9 +271,7 @@ struct sAim {
             float NearestEnemyDist = 9999;
             bool RetriDistButton;
 };
-sAim Aim{0};
-
-bool ActiveRetribution, ActiveAutoSkill;
+extern sAim Aim;
 
 //'''''MAPHACK INIT'''''//
 struct sConfig {
@@ -414,25 +399,13 @@ struct sConfig {
 
     bool MinimapMonsterIcon;
 };
-sConfig Config{0};
-
-static float SetFieldOfView = 0, GetFieldOfView = 0;
-static float sliderValue;
-static float RangeCombo = 10.0;
-static float RangePredict = 13.0;
-static float TargetHP = 1750;
-static float RangeFOV = 10.0;
-static float speedAtt = 1.0f;
-static float TargetHPPer = 40;
-float SpeedPredict = 1;
+extern sConfig Config;
 
 enum ETargetPriority {
     Dist = 0,
     LowHP = 1,
     LowHPPercent = 2,
 };
-
-bool PerformanceInt;
 
 static void HelpMarker(const char* desc)
 {

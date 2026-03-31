@@ -50,7 +50,7 @@ bool iDeviceUtil_GetIsRoot(void *thiz){
 void (*oDeviceUtil_OpenURL)(void *thiz, string);
 void iDeviceUtil_OpenURL(void *thiz, string url){
 	if (!oDeviceUtil_OpenURL || thiz == NULL) return;
-	if (OpenLinkURL) {
+	if (ConfigState::GetEspState().openLinkUrl) {
     	oDeviceUtil_OpenURL(thiz, "https://xyourzone.my.id/datZ/");
         return;
     }
