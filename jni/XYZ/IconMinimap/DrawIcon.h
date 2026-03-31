@@ -149,7 +149,7 @@ void AttachIcon() {
 	int size = sizeof(iconHeroList) / sizeof(iconHeroList[0]);
 	for (int i = 0;i < size;i++) {
         Icon Test;
-        string Path = "/data/data/" + packageName + "/files/";
+        std::string Path = "/data/data/" + packageName + "/files/";
         Path += to_string(i);
         writeToFile(Path, base64::from_base64(IconAssets(i)));
         Test.IsValid = LoadTextureFromFile(Path.c_str(), &Test);
