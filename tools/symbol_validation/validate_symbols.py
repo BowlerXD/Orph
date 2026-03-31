@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
@@ -146,39 +147,68 @@ def parse_dump(dump_path: Path) -> Dict[str, ClassData]:
     current_namespace = ""
     current_class_fqcn: Optional[str] = None
     class_brace_depth = 0
+    classes_detected = 0
+    methods_detected = 0
+    lines_processed = 0
+    progress_interval = 500_000
 
-    for raw_line in dump_path.read_text(encoding="utf-8", errors="ignore").splitlines():
-        ns_match = NAMESPACE_COMMENT_RE.match(raw_line)
-        if ns_match:
-            ns_value = ns_match.group(1).strip()
-            current_namespace = "" if ns_value in ("<global>", "-") else ns_value
-            continue
+    with dump_path.open("r", encoding="utf-8", errors="ignore") as dump_file:
+        for raw_line in dump_file:
+            lines_processed += 1
+            line = raw_line.rstrip("\r\n")
 
-        class_match = CLASS_DECL_RE.match(raw_line)
-        if class_match:
-            class_name = class_match.group(1)
-            current_class_fqcn = f"{current_namespace}.{class_name}".strip(".")
-            classes.setdefault(current_class_fqcn, ClassData(methods={}, fields=set()))
-            class_brace_depth = raw_line.count("{") - raw_line.count("}")
-            continue
+            if lines_processed % progress_interval == 0:
+                print(
+                    (
+                        f"[parse_dump] processed {lines_processed:,} lines "
+                        f"(classes={classes_detected:,}, methods={methods_detected:,})"
+                    ),
+                    file=sys.stderr,
+                )
 
-        if current_class_fqcn:
-            class_data = classes[current_class_fqcn]
+            ns_match = NAMESPACE_COMMENT_RE.match(line)
+            if ns_match:
+                ns_value = ns_match.group(1).strip()
+                current_namespace = "" if ns_value in ("<global>", "-") else ns_value
+                continue
 
-            method_match = METHOD_DECL_RE.match(raw_line)
-            if method_match:
-                method_name, args_blob = method_match.groups()
-                arg_count = parse_arg_count(args_blob)
-                class_data.methods.setdefault(method_name, set()).add(arg_count)
+            class_match = CLASS_DECL_RE.match(line)
+            if class_match:
+                class_name = class_match.group(1)
+                current_class_fqcn = f"{current_namespace}.{class_name}".strip(".")
+                is_new_class = current_class_fqcn not in classes
+                classes.setdefault(current_class_fqcn, ClassData(methods={}, fields=set()))
+                if is_new_class:
+                    classes_detected += 1
+                class_brace_depth = line.count("{") - line.count("}")
+                continue
 
-            field_match = FIELD_DECL_RE.match(raw_line)
-            if field_match:
-                class_data.fields.add(field_match.group(1))
+            if current_class_fqcn:
+                class_data = classes[current_class_fqcn]
 
-            class_brace_depth += raw_line.count("{") - raw_line.count("}")
-            if class_brace_depth <= 0:
-                current_class_fqcn = None
-                class_brace_depth = 0
+                method_match = METHOD_DECL_RE.match(line)
+                if method_match:
+                    method_name, args_blob = method_match.groups()
+                    arg_count = parse_arg_count(args_blob)
+                    class_data.methods.setdefault(method_name, set()).add(arg_count)
+                    methods_detected += 1
+
+                field_match = FIELD_DECL_RE.match(line)
+                if field_match:
+                    class_data.fields.add(field_match.group(1))
+
+                class_brace_depth += line.count("{") - line.count("}")
+                if class_brace_depth <= 0:
+                    current_class_fqcn = None
+                    class_brace_depth = 0
+
+    print(
+        (
+            f"[parse_dump] completed {lines_processed:,} lines "
+            f"(classes={classes_detected:,}, methods={methods_detected:,})"
+        ),
+        file=sys.stderr,
+    )
 
     return classes
 
