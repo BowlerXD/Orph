@@ -278,6 +278,9 @@ static inline void TickVirtualAntiAfk(bool inMatch) {
 
     auto afkCompOffset = ShowBattleScene_m_AFKComp();
     if (!afkCompOffset) {
+        afkCompOffset = ShowBattleScene_m_AFKComp_Alt();
+    }
+    if (!afkCompOffset) {
         AntiAfkDebugSetReason(ANTI_AFK_SKIP_AI_CONTROL_OFF, nowSec);
         return;
     }
@@ -313,6 +316,26 @@ static inline void TickVirtualAntiAfk(bool inMatch) {
         auto waitTurnAiOffset = ShowPlayer_m_bWaitTurnAI();
         if (waitTurnAiOffset) {
             afkPopupVisibleNow = *(bool *)((uintptr_t)localPlayerShow + waitTurnAiOffset);
+        }
+    }
+
+    if (!afkPopupVisibleNow) {
+        auto getWaitTurnAi = ShowPlayer_get_bWaitTurnAI();
+        if (getWaitTurnAi) {
+            auto fn = reinterpret_cast<bool (*)(void *)>(getWaitTurnAi);
+            afkPopupVisibleNow = fn((void *)localPlayerShow);
+        }
+    }
+
+    if (!afkPopupVisibleNow) {
+        auto afkTurnAiCompOffset = ShowPlayer_m_ShowAFKTurnAIComp();
+        auto afkTurnAiCompGetter = ShowAFKTurnAIComp_get_m_bWaitTurnAI();
+        if (afkTurnAiCompOffset && afkTurnAiCompGetter) {
+            auto afkTurnAiComp = *(uintptr_t *)((uintptr_t)localPlayerShow + afkTurnAiCompOffset);
+            if (afkTurnAiComp) {
+                auto fn = reinterpret_cast<bool (*)(void *)>(afkTurnAiCompGetter);
+                afkPopupVisibleNow = fn((void *)afkTurnAiComp);
+            }
         }
     }
 
