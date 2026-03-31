@@ -1,3 +1,5 @@
+#pragma once
+
 // Define variables for minimap settings
 static float minimapPosX = 82.337;
 static float minimapPosY = 0.0f;
@@ -88,4 +90,3 @@ void RenderESP(ImDrawList *draw, int screenWidth, int screenHeight) {
         }
     }
 }
-
