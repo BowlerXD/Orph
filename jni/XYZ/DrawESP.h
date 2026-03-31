@@ -176,8 +176,11 @@ static std::chrono::steady_clock::time_point g_AntiAfkMatchEnteredSince = std::c
 static bool g_AntiAfkPrevToggleState = false;
 static bool g_AntiAfkPrevInMatchState = false;
 
-using ShowSelfPlayerTryUseSkill9Fn = int (*)(void *, int, Vector3, bool, Vector3, bool, bool, bool, bool, uint32_t);
-using ShowSelfPlayerTryUseSkill12Fn = int (*)(void *, int *, int, Vector3, bool, Vector3, bool, bool, bool, uint32_t, bool, uint32_t, uint32_t);
+typedef int (*ShowSelfPlayerTryUseSkill9Fn)(void *, int, Vector3, bool, Vector3, bool, bool, bool, bool, uint32_t);
+typedef int (*ShowSelfPlayerTryUseSkill12Fn)(void *, int *, int, Vector3, bool, Vector3, bool, bool, bool, uint32_t, bool, uint32_t, uint32_t);
+typedef int (*ShowSelfPlayerTryMoveFn)(void *, int);
+typedef void (*ShowSelfPlayerUnityChangeMoveFn)(void *);
+typedef void (*ShowSelfPlayerSendWeakNetActivity2LogicFn)(void *);
 
 static inline void TickVirtualAntiAfk(bool inMatch) {
     auto now = std::chrono::steady_clock::now();
@@ -248,17 +251,17 @@ static inline void TickVirtualAntiAfk(bool inMatch) {
         // dump v2: ShowSelfPlayer has explicit movement/activity methods.
         uintptr_t sendWeakNetActivity = ShowSelfPlayer_SendWeakNetActivity2Logic;
         if (sendWeakNetActivity) {
-            auto sendFn = reinterpret_cast<ShowSelfPlayerSendWeakNetActivity2LogicFn>(sendWeakNetActivity);
+            ShowSelfPlayerSendWeakNetActivity2LogicFn sendFn = reinterpret_cast<ShowSelfPlayerSendWeakNetActivity2LogicFn>(sendWeakNetActivity);
             sendFn((void *)localPlayerShow);
         }
         uintptr_t tryMove = ShowSelfPlayer_TryMove;
         if (tryMove) {
-            auto tryMoveFn = reinterpret_cast<ShowSelfPlayerTryMoveFn>(tryMove);
+            ShowSelfPlayerTryMoveFn tryMoveFn = reinterpret_cast<ShowSelfPlayerTryMoveFn>(tryMove);
             tryMoveFn((void *)localPlayerShow, 0);
         }
         uintptr_t unityChangeMove = ShowSelfPlayer_Unity_ChangeMove;
         if (unityChangeMove) {
-            auto changeMoveFn = reinterpret_cast<ShowSelfPlayerUnityChangeMoveFn>(unityChangeMove);
+            ShowSelfPlayerUnityChangeMoveFn changeMoveFn = reinterpret_cast<ShowSelfPlayerUnityChangeMoveFn>(unityChangeMove);
             changeMoveFn((void *)localPlayerShow);
         }
         g_LastAntiAfkMoveHeartbeat = now;
@@ -269,13 +272,13 @@ static inline void TickVirtualAntiAfk(bool inMatch) {
         // fallback: ShowSelfPlayer.TryUseSkill(...) argCount 9
         uintptr_t tryUseSkill12 = ShowSelfPlayer_TryUseSkill;
         if (tryUseSkill12) {
-            auto fn12 = reinterpret_cast<ShowSelfPlayerTryUseSkill12Fn>(tryUseSkill12);
+            ShowSelfPlayerTryUseSkill12Fn fn12 = reinterpret_cast<ShowSelfPlayerTryUseSkill12Fn>(tryUseSkill12);
             int state = 0;
             fn12((void *)localPlayerShow, &state, 0, Vector3::zero(), true, Vector3::zero(), true, false, false, 0, false, 1, 2);
         } else {
             uintptr_t tryUseSkill9 = ShowSelfPlayer_TryUseSkill2;
             if (tryUseSkill9) {
-                auto fn9 = reinterpret_cast<ShowSelfPlayerTryUseSkill9Fn>(tryUseSkill9);
+                ShowSelfPlayerTryUseSkill9Fn fn9 = reinterpret_cast<ShowSelfPlayerTryUseSkill9Fn>(tryUseSkill9);
                 fn9((void *)localPlayerShow, 0, Vector3::zero(), true, Vector3::zero(), true, false, false, false, 1);
             }
         }
