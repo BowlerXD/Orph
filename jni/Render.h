@@ -231,20 +231,13 @@ void Render()
     //ShowWindow
 	if (showMenu) DrawMenu();
 
-    static bool loggedEspEntry = false;
     void *battleBridgeInstance = nullptr, *battleManagerInstance = nullptr;
     Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleData", "m_BattleBridge", &battleBridgeInstance);
     Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
     bFullChecked = IsSafeMatchRunning(battleBridgeInstance, battleManagerInstance);
-    TickVirtualAntiAfk(bFullChecked);
 
     if (bFullChecked) {
-        if (!loggedEspEntry) {
-            loggedEspEntry = true;
-        }
         NewDrawESP(ImGui::GetBackgroundDrawList(), screenWidth, screenHeight);
-    } else {
-        loggedEspEntry = false;
     }
 	
 	if (selectedFeatures == 2){

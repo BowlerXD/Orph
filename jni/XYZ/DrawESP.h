@@ -170,71 +170,6 @@ void _ShowPlayer_Unity_OnUpdate(void* thisz){
 	orig_ShowPlayer_Unity_OnUpdate(thisz);
 }
 
-static std::chrono::steady_clock::time_point g_LastAntiAfkPulse = std::chrono::steady_clock::time_point::min();
-static std::chrono::steady_clock::time_point g_AntiAfkToggleEnabledSince = std::chrono::steady_clock::time_point::min();
-static bool g_AntiAfkPrevToggleState = false;
-
-using ShowSelfPlayerTryUseSkill9Fn = int (*)(void *, int, Vector3, bool, Vector3, bool, bool, bool, bool, uint32_t);
-
-static inline void TickVirtualAntiAfk(bool inMatch) {
-    auto now = std::chrono::steady_clock::now();
-
-    if (!Config.AntiAfkOnAIControl) {
-        g_AntiAfkPrevToggleState = false;
-        g_AntiAfkToggleEnabledSince = std::chrono::steady_clock::time_point::min();
-        g_LastAntiAfkPulse = std::chrono::steady_clock::time_point::min();
-        return;
-    }
-
-    if (!g_AntiAfkPrevToggleState) {
-        g_AntiAfkPrevToggleState = true;
-        g_AntiAfkToggleEnabledSince = now;
-    }
-
-    if (!inMatch) {
-        return;
-    }
-
-    if (std::chrono::duration_cast<std::chrono::milliseconds>(now - g_AntiAfkToggleEnabledSince).count() < 40000) {
-        return;
-    }
-
-    if (std::chrono::duration_cast<std::chrono::milliseconds>(now - g_LastAntiAfkPulse).count() < 60000) {
-        return;
-    }
-
-    void *battleManagerInstance = nullptr;
-    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
-    if (!battleManagerInstance) {
-        return;
-    }
-
-    auto localPlayerShow = *(uintptr_t *) ((uintptr_t)battleManagerInstance + BattleManager_m_LocalPlayerShow());
-    if (!localPlayerShow) {
-        return;
-    }
-
-    // Virtual analog pulse (very small) to keep AFK timer alive without visible joystick drag.
-    auto moveDirOffset = ShowEntity_MoveDir();
-    if (moveDirOffset) {
-        auto *moveDir = reinterpret_cast<Vector3 *>((uintptr_t)localPlayerShow + moveDirOffset);
-        if (moveDir) {
-            const float axis = ((std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count() & 1) == 0) ? 0.02f : -0.02f;
-            moveDir->x = axis;
-            moveDir->y = 0.0f;
-            moveDir->z = 0.0f;
-        }
-    }
-
-    // Virtual basic-attack/skill pulse via internal API (no real screen click).
-    uintptr_t tryUseSkill = ShowSelfPlayer_TryUseSkill2;
-    if (tryUseSkill) {
-        auto fn = reinterpret_cast<ShowSelfPlayerTryUseSkill9Fn>(tryUseSkill);
-        fn((void *)localPlayerShow, 0, Vector3::zero(), true, Vector3::zero(), true, false, false, true, 0);
-    }
-    g_LastAntiAfkPulse = now;
-}
-
 void (*oLogicPlayer_Update)(void* thisz, int status);
 void LogicPlayer_Update(void* thisz, int status){
 	if (thisz != NULL){
@@ -766,21 +701,15 @@ void NewDrawESP(ImDrawList *draw, float screenWidth, float screenHeight) {
         draw->AddText(NULL, ((float) screenHeight / 39.0f), {(float)(screenWidth / 4.0f) - (textSize.x / 2), (float)(screenHeight - screenHeight) + (float)(screenHeight / 8.7f)}, IM_COL32(10, 255, 202, 255), sFPS.c_str());
     }
     fps.update();
-    static time_t s_lastMinimapOverlayLog = 0;
     int minimapSoldierOverlayCount = 0;
     int minimapJungleOverlayCount = 0;
 
-    static bool loggedMissingOffsets = false;
     void *battleBridgeInstance = nullptr, *battleManagerInstance = nullptr;
     Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleData", "m_BattleBridge", &battleBridgeInstance);
     Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
     if (!battleBridgeInstance || !battleManagerInstance) {
-        if (!loggedMissingOffsets) {
-            loggedMissingOffsets = true;
-        }
         return;
     }
-    loggedMissingOffsets = false;
 
     if (sliderValue != 0.0f || SetFieldOfView != 0.0f) {
         DroneView();
@@ -903,9 +832,6 @@ void NewDrawESP(ImDrawList *draw, float screenWidth, float screenHeight) {
                 draw->AddText(NULL, ((float) glHeight / 31.0f), {(float)(glWidth / 2) - (textSize.x / 2), (float)(glHeight - glHeight) + (float)(glHeight / 8.7f)}, IM_COL32(255, 255, 255, 255), strAlert.c_str());
             }
         }
-    }
-    if (Config.MinimapIcon && (time(nullptr) - s_lastMinimapOverlayLog >= 5)) {
-        s_lastMinimapOverlayLog = time(nullptr);
     }
     /*enemy*/
 	
