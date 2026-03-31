@@ -10,12 +10,19 @@
 
 #include "Tools/Il2Cpp.h"
 #include "Tools/Tools.h"
-#include "Config/setup.h"
 #include "Config/JNIStuff.h"
-#include "XYZ/GameClass.h"
-#include "XYZ/DrawESP.h"
 #include "Hooks.h"
 #include "Includes/Logger.h"
+
+extern uintptr_t m_IL2CPP;
+extern void UpdateMapHack(void *pThis);
+extern void (*oUpdateMapHack)(void *pThis);
+
+namespace {
+uintptr_t ResolveShowEntityOnUpdate() {
+    return (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowEntity", "Unity_OnUpdate", 0);
+}
+}
 
 bool FileExists(const std::string &filename) {
     std::ifstream file(filename);
@@ -57,7 +64,7 @@ void *main_thread(void *) {
 
     DobbyInstrument(dlsym(RTLD_NEXT, "eglSwapBuffers"), eglSwapBuffers_handler);
 
-    uintptr_t showEntityOnUpdate = ShowEntity_OnUpdate;
+    uintptr_t showEntityOnUpdate = ResolveShowEntityOnUpdate();
     if (showEntityOnUpdate) {
         Tools::Hook((void *)showEntityOnUpdate, (void *)UpdateMapHack, (void **)&oUpdateMapHack);
     }
