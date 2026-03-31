@@ -15,25 +15,62 @@ extern jobject getJNIContext(JNIEnv *env);
 
 namespace {
 int yaserClose() {
+    if (i_App == nullptr || i_App->activity == nullptr || i_App->activity->vm == nullptr || i_App->activity->clazz == nullptr) {
+        return -1;
+    }
+
     JavaVM *java_vm = i_App->activity->vm;
     JNIEnv *java_env = nullptr;
+    bool attached_by_this_function = false;
+    jclass native_activity_clazz = nullptr;
+
     jint jni_return = java_vm->GetEnv((void **)&java_env, JNI_VERSION_1_6);
     if (jni_return == JNI_ERR)
         return -1;
-    jni_return = java_vm->AttachCurrentThread(&java_env, nullptr);
-    if (jni_return != JNI_OK)
+    if (jni_return == JNI_EDETACHED) {
+        jni_return = java_vm->AttachCurrentThread(&java_env, nullptr);
+        if (jni_return != JNI_OK || java_env == nullptr)
+            return -2;
+        attached_by_this_function = true;
+    } else if (jni_return != JNI_OK || java_env == nullptr) {
         return -2;
-    jclass native_activity_clazz = java_env->GetObjectClass(i_App->activity->clazz);
-    if (native_activity_clazz == nullptr)
-        return -3;
+    }
+
+    native_activity_clazz = java_env->GetObjectClass(i_App->activity->clazz);
+    if (native_activity_clazz == nullptr) {
+        jni_return = -3;
+        goto cleanup;
+    }
+
     jmethodID method_id = java_env->GetMethodID(native_activity_clazz, "AndroidThunkJava_RestartGame", "()V");
-    if (method_id == nullptr)
-        return -4;
+    if (method_id == nullptr) {
+        jni_return = -4;
+        goto cleanup;
+    }
+
     java_env->CallVoidMethod(i_App->activity->clazz, method_id);
-    jni_return = java_vm->DetachCurrentThread();
-    if (jni_return != JNI_OK)
-        return -5;
-    return 0;
+    if (java_env->ExceptionCheck()) {
+#ifndef NDEBUG
+        java_env->ExceptionDescribe();
+#endif
+        java_env->ExceptionClear();
+        jni_return = -5;
+        goto cleanup;
+    }
+
+    jni_return = 0;
+
+cleanup:
+    if (native_activity_clazz != nullptr) {
+        java_env->DeleteLocalRef(native_activity_clazz);
+    }
+    if (attached_by_this_function) {
+        jint detach_result = java_vm->DetachCurrentThread();
+        if (detach_result != JNI_OK && jni_return == 0) {
+            return -6;
+        }
+    }
+    return jni_return;
 }
 
 bool isYaserFolderHere(const std::string &folderPath) {
