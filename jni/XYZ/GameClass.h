@@ -402,6 +402,10 @@ uintptr_t BattleBridge_UpdateBloodPos(){
 	return (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "BattleBridge", "UpdateBloodPos", 2);
 }
 
+uintptr_t BattleBridge_SetAIControl() {
+	return (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "BattleBridge", "SetAIControl", 5);
+}
+
 uintptr_t BattleManager_m_LocalPlayerShow(){
 	return (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "BattleManager", "m_LocalPlayerShow");
 }
@@ -427,6 +431,10 @@ uintptr_t ShowBattleScene_m_AFKComp() {
 	return (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "Battle", "ShowBattleScene", "m_AFKComp");
 }
 
+uintptr_t ShowBattleScene_m_AFKComp_Alt() {
+	return (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "Battle.ShowBattleScene", "m_AFKComp");
+}
+
 uintptr_t ShowAFKComp_m_bStayTooLongTipShow() {
 	return (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "ShowAFKComp", "m_bStayTooLongTipShow");
 }
@@ -439,8 +447,28 @@ uintptr_t ShowAFKComp_get_m_StayShopTooLong() {
 	return (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowAFKComp", "get_m_StayShopTooLong", 0);
 }
 
+uintptr_t ShowAFKComp_uStayUITipTime() {
+	return (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "ShowAFKComp", "uStayUITipTime");
+}
+
+uintptr_t ShowAFKComp_uOpenShopTime() {
+	return (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "ShowAFKComp", "uOpenShopTime");
+}
+
 uintptr_t ShowPlayer_m_bWaitTurnAI() {
 	return (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "ShowPlayer", "m_bWaitTurnAI");
+}
+
+uintptr_t ShowPlayer_get_bWaitTurnAI() {
+	return (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowPlayer", "get_bWaitTurnAI", 0);
+}
+
+uintptr_t ShowPlayer_m_ShowAFKTurnAIComp() {
+	return (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "ShowPlayer", "m_ShowAFKTurnAIComp");
+}
+
+uintptr_t ShowAFKTurnAIComp_get_m_bWaitTurnAI() {
+	return (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowAFKTurnAIComp", "get_m_bWaitTurnAI", 0);
 }
 
 //Class PlayerData (retri req)
