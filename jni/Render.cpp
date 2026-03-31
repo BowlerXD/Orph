@@ -36,6 +36,7 @@
 #define IMGUI_DEFINE_MATH_OPERATORS
 
 #include "imgui.h"
+#include "imgui/icon.h"
 #include "imgui_additional.h"
 #include "imgui_themes.h"
 #include <android_native_app_glue.h>
