@@ -107,9 +107,23 @@ using std::this_thread::sleep_for;
 #include <unistd.h>
 
 bool PatchOffset(uintptr_t address, const void *buffer, size_t length) {
-	unsigned long page_size = sysconf(_SC_PAGESIZE);
-    unsigned long size = page_size * sizeof(uintptr_t);
-    return mprotect((void *)(address - (address % page_size) - page_size), (size_t) size, PROT_EXEC | PROT_READ | PROT_WRITE) == 0 && memcpy((void *)address, (void *)buffer, length) != 0;
+    if (length == 0 || buffer == nullptr) {
+        return false;
+    }
+
+    const auto page_size = static_cast<uintptr_t>(sysconf(_SC_PAGESIZE));
+    const uintptr_t page_start = address & ~(page_size - 1); // align-down to page boundary for mprotect.
+    const uintptr_t page_end = (address + length + page_size - 1) & ~(page_size - 1); // align-up to cover full patched range.
+    const size_t protect_size = static_cast<size_t>(page_end - page_start);
+
+    if (mprotect(reinterpret_cast<void *>(page_start), protect_size, PROT_READ | PROT_WRITE | PROT_EXEC) != 0) {
+        return false;
+    }
+
+    memcpy(reinterpret_cast<void *>(address), buffer, length);
+
+    // Restore RX after patching to keep executable pages from staying writable.
+    return mprotect(reinterpret_cast<void *>(page_start), protect_size, PROT_READ | PROT_EXEC) == 0;
 }
 
 void detectDump() {
