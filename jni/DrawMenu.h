@@ -1,5 +1,4 @@
 bool showMenu = true;
-bool bFullChecked = false;
 int selectedFeatures = 1;
 android_app *i_App = 0;
 constexpr const char *kConfigPath = "/storage/emulated/0/Download/orph.ini";
@@ -273,6 +272,7 @@ void DrawMenu() {
     io.FontGlobalScale = window_scale;
 
     static bool isLogin = false, isSave = false;
+    static bool battleDataResolved = false;
     static char s[64] = {};
     if (isLogin && !isSave) {
         SharedPreferences sharedPref(GetJNIEnv(g_vm), "xyourzone_sharedpref");
@@ -293,9 +293,11 @@ void DrawMenu() {
         window_flags = ImGuiWindowFlags_None;
     }
     
-    if (isLogin) {
+    if (!isLogin) {
+        battleDataResolved = false;
+    } else if (!battleDataResolved) {
         loadBattleData(battleData);
-        bFullChecked = true;
+        battleDataResolved = true;
     }
 	
     std::string FULLTITLE = std::string("TMH") + std::string(" | ") + clientManager.c_str() + std::string(" | ") + std::string(ABI);
@@ -334,6 +336,8 @@ void DrawMenu() {
                     }
 
                     if (ImGui::Button("Login", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
+                        isSave = false;
+                        battleDataResolved = false;
                         std::thread login_thread(LoginThread, std::string(s), &isLogin);
                         login_thread.detach();
                     }
