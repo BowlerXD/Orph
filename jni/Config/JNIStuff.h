@@ -166,18 +166,64 @@ const char *GetDeviceFingerPrint(JNIEnv *env) {
     return env->GetStringUTFChars(str, 0);
 }
 
-int GetDeviceVersionRelease(JNIEnv *env) {
+std::string GetDeviceVersionRelease(JNIEnv *env) {
+    if (env == nullptr) {
+        return "";
+    }
+
     jclass buildClass = env->FindClass("android/os/Build$VERSION");
-    jfieldID sdkIntField = env->GetStaticFieldID(buildClass, "RELEASE", "I");
-    jint sdkInt = env->GetStaticIntField(buildClass, sdkIntField);
-    return (int)sdkInt;
+    if (buildClass == nullptr) {
+        return "";
+    }
+
+    jfieldID releaseField = env->GetStaticFieldID(buildClass, "RELEASE", "Ljava/lang/String;");
+    if (releaseField == nullptr) {
+        return "";
+    }
+
+    jstring releaseString = static_cast<jstring>(env->GetStaticObjectField(buildClass, releaseField));
+    if (releaseString == nullptr) {
+        return "";
+    }
+
+    const char *releaseChars = env->GetStringUTFChars(releaseString, nullptr);
+    if (releaseChars == nullptr) {
+        return "";
+    }
+
+    std::string result(releaseChars);
+    env->ReleaseStringUTFChars(releaseString, releaseChars);
+    return result;
 }
 
-int GetDeviceVersionIncremental(JNIEnv *env) {
+std::string GetDeviceVersionIncremental(JNIEnv *env) {
+    if (env == nullptr) {
+        return "";
+    }
+
     jclass buildClass = env->FindClass("android/os/Build$VERSION");
-    jfieldID sdkIntField = env->GetStaticFieldID(buildClass, "INCREMENTAL", "I");
-    jint sdkInt = env->GetStaticIntField(buildClass, sdkIntField);
-    return (int)sdkInt;
+    if (buildClass == nullptr) {
+        return "";
+    }
+
+    jfieldID incrementalField = env->GetStaticFieldID(buildClass, "INCREMENTAL", "Ljava/lang/String;");
+    if (incrementalField == nullptr) {
+        return "";
+    }
+
+    jstring incrementalString = static_cast<jstring>(env->GetStaticObjectField(buildClass, incrementalField));
+    if (incrementalString == nullptr) {
+        return "";
+    }
+
+    const char *incrementalChars = env->GetStringUTFChars(incrementalString, nullptr);
+    if (incrementalChars == nullptr) {
+        return "";
+    }
+
+    std::string result(incrementalChars);
+    env->ReleaseStringUTFChars(incrementalString, incrementalChars);
+    return result;
 }
 
 const char *GetDeviceID(JNIEnv *env) {
