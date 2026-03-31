@@ -2,7 +2,24 @@
 
 #include <dlfcn.h>
 #include <cstring>
+#include <sys/mman.h>
+#include <unistd.h>
+#include <GLES3/gl3.h>
 
+#define IMGUI_DEFINE_MATH_OPERATORS
+#include "imgui.h"
+#include "imgui_additional.h"
+#include "backends/imgui_impl_android.h"
+#include "backends/imgui_impl_opengl3.h"
+
+#include "Tools/Il2Cpp.h"
+#include "Config/setup.h"
+#include "Config/TouchSystem.h"
+#include "XYZ/IconMinimap/DrawIcon.h"
+#include "XYZ/GameClass.h"
+#include "XYZ/DrawESP.h"
+#include "DrawMenu.h"
+#include "consolas.hpp"
 #include "Render.h"
 #include "Tools/Dobby/dobby.h"
 #include "xHook/xhook.h"
