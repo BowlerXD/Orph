@@ -75,6 +75,8 @@ LOCAL_SRC_FILES := imgui/imgui.cpp    \
     xHook/xh_log.c \
     xHook/xh_util.c \
     xHook/xh_version.c \
+    SecurityChecks.cpp \
+    Hooks.cpp \
     Main.cpp
                      
 LOCAL_STATIC_LIBRARIES  := libcurl libssl libcrypto libdobby
