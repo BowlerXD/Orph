@@ -9,7 +9,11 @@
 
 #include "ConfigName.h"
 #include "GameClass.h"
+#include "IconMinimap/IconList.h"
+#include "Minimap.h"
 #include "SDK.h"
+#include "ToString.h"
+#include "DrawMinimap.h"
 
 extern bool bFullChecked;
 
