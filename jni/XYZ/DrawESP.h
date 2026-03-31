@@ -171,11 +171,13 @@ void _ShowPlayer_Unity_OnUpdate(void* thisz){
 }
 
 static std::chrono::steady_clock::time_point g_LastAntiAfkPulse = std::chrono::steady_clock::time_point::min();
+static std::chrono::steady_clock::time_point g_LastAntiAfkMoveHeartbeat = std::chrono::steady_clock::time_point::min();
 static std::chrono::steady_clock::time_point g_AntiAfkMatchEnteredSince = std::chrono::steady_clock::time_point::min();
 static bool g_AntiAfkPrevToggleState = false;
 static bool g_AntiAfkPrevInMatchState = false;
 
 using ShowSelfPlayerTryUseSkill9Fn = int (*)(void *, int, Vector3, bool, Vector3, bool, bool, bool, bool, uint32_t);
+using ShowSelfPlayerTryUseSkill12Fn = int (*)(void *, int *, int, Vector3, bool, Vector3, bool, bool, bool, uint32_t, bool, uint32_t, uint32_t);
 
 static inline void TickVirtualAntiAfk(bool inMatch) {
     auto now = std::chrono::steady_clock::now();
@@ -184,6 +186,7 @@ static inline void TickVirtualAntiAfk(bool inMatch) {
         g_AntiAfkPrevToggleState = false;
         g_AntiAfkPrevInMatchState = false;
         g_AntiAfkMatchEnteredSince = std::chrono::steady_clock::time_point::min();
+        g_LastAntiAfkMoveHeartbeat = std::chrono::steady_clock::time_point::min();
         g_LastAntiAfkPulse = std::chrono::steady_clock::time_point::min();
         return;
     }
@@ -200,6 +203,7 @@ static inline void TickVirtualAntiAfk(bool inMatch) {
     if (!g_AntiAfkPrevInMatchState) {
         g_AntiAfkPrevInMatchState = true;
         g_AntiAfkMatchEnteredSince = now;
+        g_LastAntiAfkMoveHeartbeat = std::chrono::steady_clock::time_point::min();
         g_LastAntiAfkPulse = std::chrono::steady_clock::time_point::min();
     }
 
@@ -208,10 +212,6 @@ static inline void TickVirtualAntiAfk(bool inMatch) {
     }
 
     if (std::chrono::duration_cast<std::chrono::milliseconds>(now - g_AntiAfkMatchEnteredSince).count() < 40000) {
-        return;
-    }
-
-    if (std::chrono::duration_cast<std::chrono::milliseconds>(now - g_LastAntiAfkPulse).count() < 60000) {
         return;
     }
 
@@ -226,25 +226,44 @@ static inline void TickVirtualAntiAfk(bool inMatch) {
         return;
     }
 
-    // Virtual analog pulse (very small) to keep AFK timer alive without visible joystick drag.
-    auto moveDirOffset = ShowEntity_MoveDir();
-    if (moveDirOffset) {
-        auto *moveDir = reinterpret_cast<Vector3 *>((uintptr_t)localPlayerShow + moveDirOffset);
-        if (moveDir) {
-            const float axis = ((std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count() & 1) == 0) ? 0.02f : -0.02f;
-            moveDir->x = axis;
-            moveDir->y = 0.0f;
-            moveDir->z = 0.0f;
-        }
+    const bool needMoveHeartbeat = std::chrono::duration_cast<std::chrono::milliseconds>(now - g_LastAntiAfkMoveHeartbeat).count() >= 15000;
+    const bool needSkillPulse = std::chrono::duration_cast<std::chrono::milliseconds>(now - g_LastAntiAfkPulse).count() >= 60000;
+    if (!needMoveHeartbeat && !needSkillPulse) {
+        return;
     }
 
-    // Virtual basic-attack/skill pulse via internal API (no real screen click).
-    uintptr_t tryUseSkill = ShowSelfPlayer_TryUseSkill2;
-    if (tryUseSkill) {
-        auto fn = reinterpret_cast<ShowSelfPlayerTryUseSkill9Fn>(tryUseSkill);
-        fn((void *)localPlayerShow, 0, Vector3::zero(), true, Vector3::zero(), true, false, false, true, 0);
+    // Virtual movement heartbeat (small alternating analog value).
+    if (needMoveHeartbeat) {
+        auto moveDirOffset = ShowEntity_MoveDir();
+        if (moveDirOffset) {
+            auto *moveDir = reinterpret_cast<Vector3 *>((uintptr_t)localPlayerShow + moveDirOffset);
+            if (moveDir) {
+                const float axis = ((std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count() & 1) == 0) ? 0.035f : -0.035f;
+                moveDir->x = axis;
+                moveDir->y = 0.0f;
+                moveDir->z = 0.0125f;
+            }
+        }
+        g_LastAntiAfkMoveHeartbeat = now;
     }
-    g_LastAntiAfkPulse = now;
+
+    if (needSkillPulse) {
+        // dump v2: ShowSelfPlayer.TryUseSkill(out state, ...) argCount 12
+        // fallback: ShowSelfPlayer.TryUseSkill(...) argCount 9
+        uintptr_t tryUseSkill12 = ShowSelfPlayer_TryUseSkill;
+        if (tryUseSkill12) {
+            auto fn12 = reinterpret_cast<ShowSelfPlayerTryUseSkill12Fn>(tryUseSkill12);
+            int state = 0;
+            fn12((void *)localPlayerShow, &state, 0, Vector3::zero(), true, Vector3::zero(), true, false, false, 0, false, 1, 2);
+        } else {
+            uintptr_t tryUseSkill9 = ShowSelfPlayer_TryUseSkill2;
+            if (tryUseSkill9) {
+                auto fn9 = reinterpret_cast<ShowSelfPlayerTryUseSkill9Fn>(tryUseSkill9);
+                fn9((void *)localPlayerShow, 0, Vector3::zero(), true, Vector3::zero(), true, false, false, false, 1);
+            }
+        }
+        g_LastAntiAfkPulse = now;
+    }
 }
 
 void (*oLogicPlayer_Update)(void* thisz, int status);
