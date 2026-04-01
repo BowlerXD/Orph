@@ -1,4 +1,3 @@
-#include <android/log.h>
 #include <libgen.h>
 #include <fcntl.h>
 #include <inttypes.h>

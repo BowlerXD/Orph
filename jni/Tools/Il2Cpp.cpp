@@ -1,4 +1,3 @@
-#include <android/log.h>
 #include <map>
 #include <jni.h>
 #include <unistd.h>
@@ -7,8 +6,6 @@
 /*
 Update support Latest MLBB Dump by DivaArvian - Share?Gay
 */
-
-#define g_LogTag "XYZ-I2Cpp"
 
 typedef unsigned short UTF16;
 
