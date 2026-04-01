@@ -54,9 +54,9 @@ void *TryDlopenWithLog(const std::string &payloadName, const std::string &path, 
     const char *error = dlerror();
 
     if (handle) {
-        LOG_WRITE_FILE("INFO", "[JNI_OnLoad][%s] dlopen %s success: %s", payloadName.c_str(), label, path.c_str());
+        LOGI("INFO", "[JNI_OnLoad][%s] dlopen %s success: %s", payloadName.c_str(), label, path.c_str());
     } else {
-        LOG_WRITE_FILE("ERROR", "[JNI_OnLoad][%s] dlopen %s failed: %s | err=%s",
+        LOGI("ERROR", "[JNI_OnLoad][%s] dlopen %s failed: %s | err=%s",
                        payloadName.c_str(), label, path.c_str(), error ? error : "unknown");
     }
 
@@ -99,7 +99,7 @@ JNIEXPORT jint JNICALL Call_JNI_OnLoad(JavaVM *vm, void *reserved) {
         std::string sourcePath = sourcePrefix + payloadName;
         bool localExists = FileExists(localPath);
 
-        LOG_WRITE_FILE("INFO", "[JNI_OnLoad][%s] local=%s source=%s local_exists=%s",
+        LOGI("INFO", "[JNI_OnLoad][%s] local=%s source=%s local_exists=%s",
                        payloadName.c_str(), localPath.c_str(), sourcePath.c_str(), localExists ? "true" : "false");
 
         if (!localExists) {
@@ -107,10 +107,10 @@ JNIEXPORT jint JNICALL Call_JNI_OnLoad(JavaVM *vm, void *reserved) {
             if (sourceExists) {
                 CopyFile(sourcePath.c_str(), localPath.c_str());
                 localExists = FileExists(localPath);
-                LOG_WRITE_FILE("INFO", "[JNI_OnLoad][%s] copied source->local result=%s",
+                LOGI("INFO", "[JNI_OnLoad][%s] copied source->local result=%s",
                                payloadName.c_str(), localExists ? "success" : "failed");
             } else {
-                LOG_WRITE_FILE("WARN", "[JNI_OnLoad][%s] source missing, skip copy: %s",
+                LOGI("WARN", "[JNI_OnLoad][%s] source missing, skip copy: %s",
                                payloadName.c_str(), sourcePath.c_str());
             }
         }
@@ -123,11 +123,11 @@ JNIEXPORT jint JNICALL Call_JNI_OnLoad(JavaVM *vm, void *reserved) {
         }
 
         if (g_Il2CppInitFunc) {
-            LOG_WRITE_FILE("INFO", "[JNI_OnLoad][%s] payload selected", payloadName.c_str());
+            LOGI("INFO", "[JNI_OnLoad][%s] payload selected", payloadName.c_str());
             break;
         }
 
-        LOG_WRITE_FILE("WARN", "[JNI_OnLoad][%s] payload failed (local+source)", payloadName.c_str());
+        LOGI("WARN", "[JNI_OnLoad][%s] payload failed (local+source)", payloadName.c_str());
     }
 
     if (!g_Il2CppInitFunc) {
