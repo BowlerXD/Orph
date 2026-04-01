@@ -20,6 +20,7 @@ extern void (*oUpdateMapHack)(void *pThis);
 JNIEnv *GetJNIEnv(JavaVM *vm);
 std::string getPackageName(JNIEnv *env);
 bool CopyFile(const char *in, const char *out);
+bool bFullChecked = false;
 
 namespace {
 #if defined(__aarch64__)
