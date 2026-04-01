@@ -7,7 +7,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 usage() {
   cat <<'USAGE'
 Usage:
-  tools/symbol_validation/update_from_dump.sh <dump_url_or_file_path> [--fail-on-issues]
+  tools/symbol_validation/update_from_dump.sh [dump_url_or_file_path] [--fail-on-issues]
 
 Examples:
   tools/symbol_validation/update_from_dump.sh \
@@ -17,13 +17,13 @@ Examples:
 USAGE
 }
 
-if [[ $# -lt 1 ]]; then
-  usage
-  exit 1
-fi
+DEFAULT_DUMP_SOURCE="https://github.com/BowlerXD/Orph/releases/download/v2/com.mobile.legends_2.1.61.11705.cs"
 
-SOURCE="$1"
-shift
+SOURCE="${DEFAULT_DUMP_SOURCE}"
+if [[ $# -gt 0 && "$1" != "--fail-on-issues" ]]; then
+  SOURCE="$1"
+  shift
+fi
 
 FAIL_FLAG=""
 if [[ $# -gt 0 ]]; then

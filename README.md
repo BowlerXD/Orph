@@ -29,8 +29,11 @@ Tambahan utilitas untuk cek simbol IL2CPP kritikal terhadap dump `.cs`.
 Gunakan script berikut supaya alur update dump konsisten:
 
 ```bash
-tools/symbol_validation/update_from_dump.sh <dump_url_atau_path_file>
+tools/symbol_validation/update_from_dump.sh [dump_url_atau_path_file]
 ```
+
+Jika argumen dump tidak diberikan, script otomatis memakai dump default:
+`https://github.com/BowlerXD/Orph/releases/download/v2/com.mobile.legends_2.1.61.11705.cs`.
 
 Contoh untuk dump rilis `v2`:
 
