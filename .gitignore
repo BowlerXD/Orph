@@ -6,3 +6,8 @@ artifacts/dumps/*
 reports/symbol_validation/*.json
 reports/symbol_validation/*.txt
 !reports/symbol_validation/.gitkeep
+
+# Native build artifacts
+obj/
+**/*.o
+**/*.o.d
