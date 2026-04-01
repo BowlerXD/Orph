@@ -17,8 +17,6 @@
 #include <sys/uio.h>
 #include <fcntl.h>
 #include <jni.h>
-#include <android/log.h>
-
 #include <openssl/evp.h>
 #include <openssl/pem.h>
 #include <openssl/rsa.h>

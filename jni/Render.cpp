@@ -17,14 +17,12 @@
 #include <sys/uio.h>
 #include <fcntl.h>
 #include <jni.h>
-#include <android/log.h>
 #include <elf.h>
 #include <dlfcn.h>
 #include <sys/system_properties.h>
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
 
-#include <android/log.h>
 #include <android/asset_manager.h>
 #include <android/asset_manager_jni.h>
 #include <android/native_window.h>

@@ -1,4 +1,3 @@
-#include <android/log.h>
 #include <dlfcn.h>
 #include <elf.h>
 #include <fcntl.h>
@@ -9,7 +8,6 @@
 #include <string.h>
 #include "fake_dlfcn.h"
 
-#define g_LogTag "Fake_Dlfcn-LOGGER"
 #define log_err(fmt, args...) ((void)0)
 #define fatal(fmt, args...) do { log_err(fmt, ##args); goto err_exit; } while(0)
 

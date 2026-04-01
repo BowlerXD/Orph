@@ -31,7 +31,6 @@
 #include <inttypes.h>
 #include <stdlib.h>
 #include <sys/mman.h>
-#include <android/log.h>
 #include <cstring>
 #include <errno.h>
 
