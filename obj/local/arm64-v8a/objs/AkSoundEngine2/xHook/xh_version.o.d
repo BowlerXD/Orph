@@ -1,4 +1,0 @@
-./obj/local/arm64-v8a/objs/AkSoundEngine2/xHook/xh_version.o: \
-  jni/xHook/xh_version.c jni/xHook/xh_version.h
-
-jni/xHook/xh_version.h:
