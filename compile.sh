@@ -11,4 +11,12 @@ if [ ! -f jni/Application.mk ]; then
   exit 1
 fi
 
-NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=jni/Android.mk NDK_APPLICATION_MK=jni/Application.mk ~/ndk-aide/ndk-build
+TMP_OBJ_DIR="$(mktemp -d "${TMPDIR:-/tmp}/orph-ndk-obj.XXXXXX")"
+trap 'rm -rf "${TMP_OBJ_DIR}"' EXIT
+
+NDK_PROJECT_PATH=. \
+APP_BUILD_SCRIPT=jni/Android.mk \
+NDK_APPLICATION_MK=jni/Application.mk \
+NDK_OUT="${TMP_OBJ_DIR}" \
+NDK_LIBS_OUT="${PWD}/libs" \
+~/ndk-aide/ndk-build "$@"

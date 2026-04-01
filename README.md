@@ -8,6 +8,7 @@ Kebijakan repo untuk artefak native:
   - Contoh saat ini: `libs/armeabi-v7a/libAkSoundEngine2.so`.
 - **Lokasi non-resmi (hasil build lokal) tidak boleh di-commit:** `obj/local/...`, `obj/...`, dan output sementara lain dari NDK.
 - Jika build dilakukan penuh oleh CI/pipeline, binary hasil build **tidak perlu disimpan di Git**. Simpan hanya artefak release final yang memang akan didistribusikan.
+- `compile.sh` sudah diarahkan agar artefak sementara NDK (`obj`) dibuat di direktori temporary OS dan dibersihkan otomatis setelah build selesai.
 
 Checklist singkat sebelum release:
 1. Pastikan hanya binary release yang berada di `libs/<abi>/`.
@@ -29,8 +30,11 @@ Tambahan utilitas untuk cek simbol IL2CPP kritikal terhadap dump `.cs`.
 Gunakan script berikut supaya alur update dump konsisten:
 
 ```bash
-tools/symbol_validation/update_from_dump.sh <dump_url_atau_path_file>
+tools/symbol_validation/update_from_dump.sh [dump_url_atau_path_file]
 ```
+
+Jika argumen dump tidak diberikan, script otomatis memakai dump default:
+`https://github.com/BowlerXD/Orph/releases/download/v2/com.mobile.legends_2.1.61.11705.cs`.
 
 Contoh untuk dump rilis `v2`:
 
