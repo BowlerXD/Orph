@@ -667,7 +667,9 @@ void xh_core_clear()
 
 void xh_core_enable_debug(int flag)
 {
-    xh_log_priority = (flag ? ANDROID_LOG_DEBUG : ANDROID_LOG_WARN);
+    // Permanently disable runtime debug log escalation from app flow.
+    (void)flag;
+    xh_log_priority = ANDROID_LOG_WARN;
 }
 
 void xh_core_enable_sigsegv_protection(int flag)

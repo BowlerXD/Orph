@@ -47,7 +47,8 @@ void xhook_clear()
 
 void xhook_enable_debug(int flag)
 {
-    return xh_core_enable_debug(flag);
+    // Debug elevation is permanently disabled for release flow.
+    (void)flag;
 }
 
 void xhook_enable_sigsegv_protection(int flag)
