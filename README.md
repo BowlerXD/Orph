@@ -92,3 +92,12 @@ Fitur **Anti AFK (AI Control)** berjalan sebagai **virtual pulse**, bukan klik/t
    - match valid/sedang berjalan (`inMatch == true`).
 4. Ada cooldown **60 detik** antar pulse.
 5. Pulse dikirim lewat API internal skill (`ShowSelfPlayer_TryUseSkill2`) dan gerak analog kecil (`MoveDir`) saat AI mengambil kontrol, untuk bantu mencegah status AFK tanpa input fisik pengguna.
+
+
+## xHook debug policy (release)
+
+Untuk menjaga build release tetap bersih dari peningkatan verbosity log saat runtime:
+
+- JNI `NativeHandler.enableDebug(...)` tetap diekspos untuk kompatibilitas signature Java lama, tetapi implementasinya **no-op**.
+- `xhook_enable_debug(...)` dan `xh_core_enable_debug(...)` dinonaktifkan untuk jalur app flow normal, sehingga level log xHook tidak bisa dinaikkan ke `DEBUG` dari sisi aplikasi.
+- Kebijakan ini bersifat permanen untuk alur release kecuali ada perubahan desain eksplisit pada layer native.

@@ -44,10 +44,10 @@ JNIEXPORT void JNI_API_DEF(clear)(JNIEnv *env, jobject obj)
 
 JNIEXPORT void JNI_API_DEF(enableDebug)(JNIEnv *env, jobject obj, jboolean flag)
 {
+    // Keep JNI signature for Java-side compatibility, but permanently disable xHook debug escalation.
     (void)env;
     (void)obj;
-
-    xhook_enable_debug(flag ? 1 : 0);
+    (void)flag;
 }
 
 JNIEXPORT void JNI_API_DEF(enableSigSegvProtection)(JNIEnv *env, jobject obj, jboolean flag)
