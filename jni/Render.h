@@ -212,10 +212,18 @@ void Render()
     //IsVPNEnabled();
 	
     if (screenWidth < glWidth && screenHeight < glHeight) setRes(glWidth, glHeight);
-    
-    // set the unity screen resolution to fix touch issue
-    if (screenWidth != Screen::get_width() || screenHeight != Screen::get_height()) {
-        Screen::SetResolution(screenWidth, screenHeight, true);
+
+    // set the unity screen resolution to fix touch issue.
+    // throttle native reads/writes to avoid JNI overhead every frame.
+    static double nextResolutionSyncTime = 0.0;
+    const double now = ImGui::GetTime();
+    if (now >= nextResolutionSyncTime) {
+        nextResolutionSyncTime = now + 0.25; // 4x per second is enough for resize sync
+        const int unityWidth = Screen::get_width();
+        const int unityHeight = Screen::get_height();
+        if (screenWidth != unityWidth || screenHeight != unityHeight) {
+            Screen::SetResolution(screenWidth, screenHeight, true);
+        }
     }
     
     ImGui_GetTouch(io, screenHeight);
@@ -231,10 +239,16 @@ void Render()
     //ShowWindow
 	if (showMenu) DrawMenu();
 
-    void *battleBridgeInstance = nullptr, *battleManagerInstance = nullptr;
-    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleData", "m_BattleBridge", &battleBridgeInstance);
-    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
-    bFullChecked = IsSafeMatchRunning(battleBridgeInstance, battleManagerInstance);
+    static double nextMatchProbeTime = 0.0;
+    static bool cachedSafeMatch = false;
+    if (now >= nextMatchProbeTime) {
+        nextMatchProbeTime = now + 0.05; // probe 20x/s to reduce IL2CPP lookup overhead
+        void *battleBridgeInstance = nullptr, *battleManagerInstance = nullptr;
+        Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleData", "m_BattleBridge", &battleBridgeInstance);
+        Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleManager", "Instance", &battleManagerInstance);
+        cachedSafeMatch = IsSafeMatchRunning(battleBridgeInstance, battleManagerInstance);
+    }
+    bFullChecked = cachedSafeMatch;
 
     if (bFullChecked) {
         NewDrawESP(ImGui::GetBackgroundDrawList(), screenWidth, screenHeight);
