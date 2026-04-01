@@ -7,7 +7,16 @@ reports/symbol_validation/*.json
 reports/symbol_validation/*.txt
 !reports/symbol_validation/.gitkeep
 
-# Native build artifacts
+# Native build artifacts (non-release)
 obj/
+obj/local/
+**/obj/local/
 **/*.o
 **/*.o.d
+
+# Prevent duplicate local copies of release SO in non-official location
+obj/local/**/libAkSoundEngine2.so
+**/obj/local/**/libAkSoundEngine2.so
+
+# Official release artifacts are kept only under libs/<abi>/
+# (do not ignore libs/** by default)

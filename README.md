@@ -1,5 +1,19 @@
 # Orph
 
+## Build/Release artifact policy
+
+Kebijakan repo untuk artefak native:
+
+- **Lokasi artefak rilis resmi yang boleh dibagikan:** `libs/<abi>/`
+  - Contoh saat ini: `libs/armeabi-v7a/libAkSoundEngine2.so`.
+- **Lokasi non-resmi (hasil build lokal) tidak boleh di-commit:** `obj/local/...`, `obj/...`, dan output sementara lain dari NDK.
+- Jika build dilakukan penuh oleh CI/pipeline, binary hasil build **tidak perlu disimpan di Git**. Simpan hanya artefak release final yang memang akan didistribusikan.
+
+Checklist singkat sebelum release:
+1. Pastikan hanya binary release yang berada di `libs/<abi>/`.
+2. Hapus salinan duplikat seperti `obj/local/**/libAkSoundEngine2.so` bila ada.
+3. Verifikasi `.gitignore` menolak seluruh lokasi non-resmi.
+
 ## Symbol mismatch validation (pre-release)
 
 Tambahan utilitas untuk cek simbol IL2CPP kritikal terhadap dump `.cs`.
