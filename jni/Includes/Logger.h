@@ -11,12 +11,17 @@
 #include <stdio.h>
 #include <time.h>
 
-#ifndef LOG_FILE_PATH
-#define LOG_FILE_PATH "/sdcard/Download/themaphack-debug.log"
+#if !defined(LOG_ENABLE_FILE)
+#if defined(DEBUG) || !defined(NDEBUG)
+#define LOG_ENABLE_FILE 1
+#else
+#define LOG_ENABLE_FILE 0
+#endif
 #endif
 
 static inline void LOG_WRITE_FILE(const char *level, const char *fmt, ...) {
-    if (!fmt) return;
+#if LOG_ENABLE_FILE && defined(LOG_FILE_PATH)
+    if (!fmt || !LOG_FILE_PATH[0]) return;
     FILE *fp = fopen(LOG_FILE_PATH, "a");
     if (!fp) return;
 
@@ -35,6 +40,10 @@ static inline void LOG_WRITE_FILE(const char *level, const char *fmt, ...) {
 
     fputc('\n', fp);
     fclose(fp);
+#else
+    (void) level;
+    (void) fmt;
+#endif
 }
 
 #define LOGD(...) ((void)0)
