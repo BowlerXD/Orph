@@ -261,7 +261,7 @@ inline bool ShouldShowGameplayTabs() {
 
 void DrawMenu() {
 	const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
-	ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+	ImVec2 center = main_viewport->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
     ImGui::SetNextWindowSize(ImVec2(650, 680), ImGuiCond_FirstUseEver);
 
@@ -283,7 +283,9 @@ void DrawMenu() {
     }
 
     static bool isPopUpHide = false;
-    HideMenu(isPopUpHide);
+    if (isPopUpHide || ImGui::IsPopupOpen("ConfirmHide")) {
+        HideMenu(isPopUpHide);
+    }
     
     static bool bFlagAutoResize = true;
     static ImGuiWindowFlags window_flags;
@@ -300,9 +302,14 @@ void DrawMenu() {
         battleDataResolved = true;
     }
 	
-    std::string FULLTITLE = std::string("TMH") + std::string(" | ") + clientManager.c_str() + std::string(" | ") + std::string(ABI);
+    static std::string cachedClientManager;
+    static std::string cachedFullTitle;
+    if (cachedFullTitle.empty() || cachedClientManager != clientManager) {
+        cachedClientManager = clientManager;
+        cachedFullTitle = "TMH | " + cachedClientManager + " | " + ABI;
+    }
     ImGui::SetNextWindowSize(ImVec2((float) glWidth * 0.3f, (float) glHeight * 0.5f), ImGuiCond_Once); // 45% width 70% height
-    if (!ImGui::Begin(FULLTITLE.c_str(), 0, window_flags)) {
+    if (!ImGui::Begin(cachedFullTitle.c_str(), 0, window_flags)) {
         ImGui::End();
         return;
     }
@@ -357,7 +364,8 @@ void DrawMenu() {
         }
     } else {
 		if (ImGui::BeginTabBar("Tab", ImGuiTabBarFlags_FittingPolicyScroll)) {
-			if (ShouldShowGameplayTabs()){
+            const bool showGameplayTabs = ShouldShowGameplayTabs();
+			if (showGameplayTabs){
 				if (ImGui::BeginTabItem("ESP")) {
             	if (ImGui::CollapsingHeader("Player")) {
                 	if (ImGui::BeginTable("ESPPlayer", 3)) {
@@ -397,7 +405,7 @@ void DrawMenu() {
 	                ImGui::EndTabItem();
 				}
 				}
-			if (ShouldShowGameplayTabs()){
+			if (showGameplayTabs){
 				if (ImGui::BeginTabItem("Maphack")) {
 	                ImGui::Checkbox("Minimap Icon", &Config.MinimapIcon);
 	                if (!Config.MinimapIcon) ImGui::BeginDisabled();
