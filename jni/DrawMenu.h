@@ -265,6 +265,9 @@ struct RoomEnemyInfoRow {
     std::string rank;
     std::string hero;
     std::string spell;
+    int rankLevel = 0;
+    int heroId = 0;
+    int spellId = 0;
 };
 
 inline std::string RankLevelToString(int uiRankLevel) {
@@ -338,6 +341,9 @@ inline bool RefreshEnemyRoomInfo(std::vector<RoomEnemyInfoRow> &outRows) {
         row.rank = RankLevelToString(rankLevel) + " (" + std::to_string(rankLevel) + ")";
         row.hero = HeroToString(heroId);
         row.spell = SpellToString(spellId);
+        row.rankLevel = rankLevel;
+        row.heroId = heroId;
+        row.spellId = spellId;
         outRows.emplace_back(row);
     }
 
@@ -642,14 +648,7 @@ void DrawMenu() {
                     lastRefreshFrame = frameNow;
                 }
 
-                if (ImGui::Button("Refresh Enemy Data", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
-                    hasSnapshot = RefreshEnemyRoomInfo(cachedEnemies);
-                    lastRefreshFrame = frameNow;
-                }
-
                 ImGui::Spacing();
-                ImGui::Text("Enemy Count: %d", (int) cachedEnemies.size());
-                ImGui::Separator();
 
                 if (!hasSnapshot) {
                     ImGui::TextColored(RGBA2ImVec4(255, 200, 0, 255), "No room data yet. Open this tab during matchmaking/draft.");
@@ -670,9 +669,21 @@ void DrawMenu() {
                         ImGui::TableSetColumnIndex(0); ImGui::Text("%d", i + 1);
                         ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted(enemy.name.c_str());
                         ImGui::TableSetColumnIndex(2); ImGui::TextUnformatted(enemy.userId.c_str());
-                        ImGui::TableSetColumnIndex(3); ImGui::TextUnformatted(enemy.rank.c_str());
-                        ImGui::TableSetColumnIndex(4); ImGui::TextUnformatted(enemy.hero.c_str());
-                        ImGui::TableSetColumnIndex(5); ImGui::TextUnformatted(enemy.spell.c_str());
+                        ImGui::TableSetColumnIndex(3);
+                        RoomInfoRank(enemy.rankLevel, 16.0f);
+                        if (ImGui::IsItemHovered()) {
+                            ImGui::SetTooltip("%s", enemy.rank.c_str());
+                        }
+                        ImGui::TableSetColumnIndex(4);
+                        RoomInfoHero(enemy.heroId, 16.0f);
+                        if (ImGui::IsItemHovered()) {
+                            ImGui::SetTooltip("%s", enemy.hero.c_str());
+                        }
+                        ImGui::TableSetColumnIndex(5);
+                        RoomInfoSpell(enemy.spellId, 16.0f);
+                        if (ImGui::IsItemHovered()) {
+                            ImGui::SetTooltip("%s", enemy.spell.c_str());
+                        }
                     }
 
                     ImGui::EndTable();
