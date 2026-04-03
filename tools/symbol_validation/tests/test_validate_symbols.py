@@ -98,6 +98,22 @@ public class Overload {
 
         self.assertEqual(parsed["Demo.Overload"].methods["Ping"], {0, 1, 2})
 
+    def test_ignores_braces_inside_line_comments_for_class_scope(self):
+        dump = """// Namespace: Demo
+public class Foo {
+    public System.Int32 A; // fake brace }
+    public System.Void RealMethod();
+}
+"""
+        with tempfile.TemporaryDirectory() as tmp:
+            dump_path = Path(tmp) / "sample.cs"
+            dump_path.write_text(dump, encoding="utf-8")
+            parsed = parse_dump(dump_path)
+
+        self.assertIn("Demo.Foo", parsed)
+        self.assertIn("A", parsed["Demo.Foo"].fields)
+        self.assertIn("RealMethod", parsed["Demo.Foo"].methods)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -70,8 +70,8 @@ python3 tools/symbol_validation/validate_symbols.py \
   tools/symbol_validation/update_from_dump.sh \
     https://github.com/BowlerXD/Orph/releases/download/v2/com.mobile.legends_2.1.61.11705.cs
   ```
-- Hasil baseline saat ini: `FOUND=68`, `MISSING=4`, `SIGNATURE_MISMATCH=0`.
-- Daftar `MISSING` baseline: `BattleBridge::Instance`, `BattleBridge::bStartBattle`, `BattleBridge::OnSignReport`, `ACInterface::LoadCert`.
+- Hasil baseline saat ini: `FOUND=72`, `MISSING=0`, `SIGNATURE_MISMATCH=0`.
+- Daftar `MISSING` baseline: `(none)`.
 
 ### Checklist release (singkat)
 Sebelum merge update dump/simbol:
