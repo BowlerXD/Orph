@@ -355,6 +355,13 @@ inline bool RefreshEnemyRoomInfo(std::vector<RoomEnemyInfoRow> &outRows) {
     return true;
 }
 
+inline bool IsInBattleMatchNow() {
+    void *battleBridgeInstance = nullptr;
+    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleData", "m_BattleBridge", &battleBridgeInstance);
+    if (!battleBridgeInstance) return false;
+    return BattleBridge_IsStartBattle(battleBridgeInstance);
+}
+
 void DrawMenu() {
 	const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
 	ImVec2 center = main_viewport->GetCenter();
@@ -647,19 +654,27 @@ void DrawMenu() {
                 static bool hasSnapshot = false;
 
                 const int frameNow = ImGui::GetFrameCount();
+                const bool isInMatch = IsInBattleMatchNow();
                 const bool shouldAutoRefresh = (frameNow - lastRefreshFrame) >= 30;
-                if (!hasSnapshot || shouldAutoRefresh) {
+                if (!isInMatch && (!hasSnapshot || shouldAutoRefresh)) {
                     hasSnapshot = RefreshEnemyRoomInfo(cachedEnemies);
                     lastRefreshFrame = frameNow;
                 }
 
                 ImGui::Spacing();
 
-                if (!hasSnapshot) {
+                if (isInMatch) {
+                    ImGui::TextColored(RGBA2ImVec4(255, 200, 0, 255), "Room info refresh is paused while in a match.");
+                    if (!cachedEnemies.empty()) {
+                        ImGui::TextColored(RGBA2ImVec4(180, 180, 180, 255), "Showing latest matchmaking snapshot.");
+                    }
+                } else if (!hasSnapshot) {
                     ImGui::TextColored(RGBA2ImVec4(255, 200, 0, 255), "No room data yet. Open this tab during matchmaking/draft.");
                 } else if (cachedEnemies.empty()) {
                     ImGui::TextColored(RGBA2ImVec4(255, 200, 0, 255), "Room data available, but enemy side is not resolved yet.");
-                } else if (ImGui::BeginTable("EnemyRoomInfoTable", 6, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp)) {
+                }
+
+                if (!cachedEnemies.empty() && ImGui::BeginTable("EnemyRoomInfoTable", 6, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp)) {
                     ImGui::TableSetupColumn("#");
                     ImGui::TableSetupColumn("Enemy Name");
                     ImGui::TableSetupColumn("UID (Zone)");
