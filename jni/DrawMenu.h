@@ -259,6 +259,109 @@ inline bool ShouldShowGameplayTabs() {
     return selectedFeatures == 1 || selectedFeatures == 2;
 }
 
+struct RoomEnemyInfoRow {
+    std::string name;
+    std::string userId;
+    std::string rank;
+    std::string hero;
+    std::string spell;
+    int rankLevel = 0;
+    int heroId = 0;
+    int spellId = 0;
+};
+
+inline std::string RankLevelToString(int uiRankLevel) {
+    if (uiRankLevel <= 0) return "-";
+    if (uiRankLevel <= 11) return "Warrior";
+    if (uiRankLevel < 27) return "Elite";
+    if (uiRankLevel < 47) return "Master";
+    if (uiRankLevel < 77) return "Grandmaster";
+    if (uiRankLevel < 107) return "Epic";
+    if (uiRankLevel < 137) return "Legend";
+    if (uiRankLevel < 147) return "Mythic";
+    if (uiRankLevel < 157) return "Mythical Honor";
+    if (uiRankLevel < 177) return "Mythical Glory";
+    return "Mythical Immortal";
+}
+
+inline int RankLevelToStars(int uiRankLevel) {
+    if (uiRankLevel <= 136) return 0;
+    return uiRankLevel - 136;
+}
+
+inline bool RefreshEnemyRoomInfo(std::vector<RoomEnemyInfoRow> &outRows) {
+    outRows.clear();
+
+    auto *roomPlayers = GetBattlePlayerInfo();
+    if (!roomPlayers || roomPlayers->getSize() <= 0) return false;
+
+    static uintptr_t kCampOffset = 0;
+    static uintptr_t kUidOffset = 0;
+    static uintptr_t kZoneOffset = 0;
+    static uintptr_t kNameOffset = 0;
+    static uintptr_t kRankOffset = 0;
+    static uintptr_t kHeroOffset = 0;
+    static uintptr_t kSpellOffset = 0;
+    if (!kCampOffset) kCampOffset = RoomData_iCamp();
+    if (!kUidOffset) kUidOffset = RoomData_lUid();
+    if (!kZoneOffset) kZoneOffset = RoomData_uiZoneId();
+    if (!kNameOffset) kNameOffset = RoomData_sName();
+    if (!kRankOffset) kRankOffset = RoomData_uiRankLevel();
+    if (!kHeroOffset) kHeroOffset = RoomData_heroid();
+    if (!kSpellOffset) kSpellOffset = RoomData_summonSkillId();
+    if (!kCampOffset || !kUidOffset || !kZoneOffset || !kNameOffset || !kRankOffset || !kHeroOffset || !kSpellOffset) return false;
+
+    void *selfUidBoxed = nullptr;
+    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "SystemData", "m_uiID", &selfUidBoxed);
+    const int selfUid = (int) (uintptr_t) selfUidBoxed;
+
+    int selfCamp = -1;
+    for (int i = 0; i < roomPlayers->getSize(); i++) {
+        auto roomData = roomPlayers->getItems()[i];
+        if (!roomData) continue;
+        const int uid = *(int *) ((uintptr_t) roomData + kUidOffset);
+        if (uid != selfUid) continue;
+        selfCamp = *(int *) ((uintptr_t) roomData + kCampOffset);
+        break;
+    }
+
+    for (int i = 0; i < roomPlayers->getSize(); i++) {
+        auto roomData = roomPlayers->getItems()[i];
+        if (!roomData) continue;
+
+        const int camp = *(int *) ((uintptr_t) roomData + kCampOffset);
+        const int uid = *(int *) ((uintptr_t) roomData + kUidOffset);
+        const int zoneId = *(int *) ((uintptr_t) roomData + kZoneOffset);
+        const int rankLevel = *(int *) ((uintptr_t) roomData + kRankOffset);
+        const int heroId = *(int *) ((uintptr_t) roomData + kHeroOffset);
+        const int spellId = *(int *) ((uintptr_t) roomData + kSpellOffset);
+        auto *nameStr = *(String **) ((uintptr_t) roomData + kNameOffset);
+
+        if (selfCamp != -1 && camp == selfCamp) continue;
+        if (selfUid != 0 && uid == selfUid) continue;
+
+        RoomEnemyInfoRow row{};
+        row.name = nameStr ? nameStr->toString() : "Unknown";
+        row.userId = std::to_string(uid) + " (" + std::to_string(zoneId) + ")";
+        row.rank = RankLevelToString(rankLevel) + " (" + std::to_string(rankLevel) + ")";
+        row.hero = HeroToString(heroId);
+        row.spell = SpellToString(spellId);
+        row.rankLevel = rankLevel;
+        row.heroId = heroId;
+        row.spellId = spellId;
+        outRows.emplace_back(row);
+    }
+
+    return true;
+}
+
+inline bool IsInBattleMatchNow() {
+    void *battleBridgeInstance = nullptr;
+    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "BattleData", "m_BattleBridge", &battleBridgeInstance);
+    if (!battleBridgeInstance) return false;
+    return BattleBridge_IsStartBattle(battleBridgeInstance);
+}
+
 void DrawMenu() {
 	const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
 	ImVec2 center = main_viewport->GetCenter();
@@ -542,6 +645,77 @@ void DrawMenu() {
                     ImGui::EndGroupPanel();
                 }
                 ImGui::EndGroupPanel();
+                ImGui::EndTabItem();
+            }
+
+            if (ImGui::BeginTabItem("Room Info")) {
+                static std::vector<RoomEnemyInfoRow> cachedEnemies;
+                static int lastRefreshFrame = -9999;
+                static bool hasSnapshot = false;
+
+                const int frameNow = ImGui::GetFrameCount();
+                const bool isInMatch = IsInBattleMatchNow();
+                const bool shouldAutoRefresh = (frameNow - lastRefreshFrame) >= 30;
+                if (!isInMatch && (!hasSnapshot || shouldAutoRefresh)) {
+                    hasSnapshot = RefreshEnemyRoomInfo(cachedEnemies);
+                    lastRefreshFrame = frameNow;
+                }
+
+                ImGui::Spacing();
+
+                if (isInMatch) {
+                    ImGui::TextColored(RGBA2ImVec4(255, 200, 0, 255), "Room info refresh is paused while in a match.");
+                    if (!cachedEnemies.empty()) {
+                        ImGui::TextColored(RGBA2ImVec4(180, 180, 180, 255), "Showing latest matchmaking snapshot.");
+                    }
+                } else if (!hasSnapshot) {
+                    ImGui::TextColored(RGBA2ImVec4(255, 200, 0, 255), "No room data yet. Open this tab during matchmaking/draft.");
+                } else if (cachedEnemies.empty()) {
+                    ImGui::TextColored(RGBA2ImVec4(255, 200, 0, 255), "Room data available, but enemy side is not resolved yet.");
+                }
+
+                if (!cachedEnemies.empty() && ImGui::BeginTable("EnemyRoomInfoTable", 6, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp)) {
+                    ImGui::TableSetupColumn("#");
+                    ImGui::TableSetupColumn("Enemy Name");
+                    ImGui::TableSetupColumn("UID (Zone)");
+                    ImGui::TableSetupColumn("Rank");
+                    ImGui::TableSetupColumn("Hero");
+                    ImGui::TableSetupColumn("Battle Spell");
+                    ImGui::TableHeadersRow();
+
+                    for (int i = 0; i < (int) cachedEnemies.size(); i++) {
+                        const auto &enemy = cachedEnemies[i];
+                        ImGui::TableNextRow();
+                        ImGui::TableSetColumnIndex(0); ImGui::Text("%d", i + 1);
+                        ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted(enemy.name.c_str());
+                        ImGui::TableSetColumnIndex(2); ImGui::TextUnformatted(enemy.userId.c_str());
+                        ImGui::TableSetColumnIndex(3);
+                        RoomInfoRank(enemy.rankLevel, 24.0f);
+                        ImGui::SameLine();
+                        const int stars = RankLevelToStars(enemy.rankLevel);
+                        if (stars > 0) {
+                            ImGui::TextColored(RGBA2ImVec4(255, 215, 0, 255), ICON_FA_STAR " %d", stars);
+                        } else {
+                            ImGui::TextUnformatted("-");
+                        }
+                        if (ImGui::IsItemHovered()) {
+                            ImGui::SetTooltip("%s", enemy.rank.c_str());
+                        }
+                        ImGui::TableSetColumnIndex(4);
+                        RoomInfoHero(enemy.heroId, 24.0f);
+                        if (ImGui::IsItemHovered()) {
+                            ImGui::SetTooltip("%s", enemy.hero.c_str());
+                        }
+                        ImGui::TableSetColumnIndex(5);
+                        RoomInfoSpell(enemy.spellId, 24.0f);
+                        if (ImGui::IsItemHovered()) {
+                            ImGui::SetTooltip("%s", enemy.spell.c_str());
+                        }
+                    }
+
+                    ImGui::EndTable();
+                }
+
                 ImGui::EndTabItem();
             }
 			
