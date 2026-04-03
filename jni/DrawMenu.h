@@ -302,6 +302,7 @@ inline bool RefreshEnemyRoomInfo(std::vector<RoomEnemyInfoRow> &outRows) {
     static uintptr_t kRankOffset = 0;
     static uintptr_t kHeroOffset = 0;
     static uintptr_t kSpellOffset = 0;
+    static uintptr_t kRoomOrderOffset = 0;
     if (!kCampOffset) kCampOffset = RoomData_iCamp();
     if (!kUidOffset) kUidOffset = RoomData_lUid();
     if (!kZoneOffset) kZoneOffset = RoomData_uiZoneId();
@@ -309,17 +310,21 @@ inline bool RefreshEnemyRoomInfo(std::vector<RoomEnemyInfoRow> &outRows) {
     if (!kRankOffset) kRankOffset = RoomData_uiRankLevel();
     if (!kHeroOffset) kHeroOffset = RoomData_heroid();
     if (!kSpellOffset) kSpellOffset = RoomData_summonSkillId();
+    if (!kRoomOrderOffset) kRoomOrderOffset = SystemData_RoomData_iRoomOrder();
     if (!kCampOffset || !kUidOffset || !kZoneOffset || !kNameOffset || !kRankOffset || !kHeroOffset || !kSpellOffset) return false;
 
-    void *selfUidBoxed = nullptr;
-    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "SystemData", "m_uiID", &selfUidBoxed);
-    const int selfUid = (int) (uintptr_t) selfUidBoxed;
+    uint32_t selfUid32 = 0;
+    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "SystemData", "m_uiID", &selfUid32);
+    const uint64_t selfUid = (uint64_t) selfUid32;
 
     int selfCamp = -1;
     for (int i = 0; i < roomPlayers->getSize(); i++) {
         auto roomData = roomPlayers->getItems()[i];
         if (!roomData) continue;
-        const int uid = *(int *) ((uintptr_t) roomData + kUidOffset);
+        uint64_t uid = *(uint64_t *) ((uintptr_t) roomData + kUidOffset);
+        if (uid == 0) {
+            uid = (uint64_t) (*(uint32_t *) ((uintptr_t) roomData + kUidOffset));
+        }
         if (uid != selfUid) continue;
         selfCamp = *(int *) ((uintptr_t) roomData + kCampOffset);
         break;
@@ -330,14 +335,19 @@ inline bool RefreshEnemyRoomInfo(std::vector<RoomEnemyInfoRow> &outRows) {
         if (!roomData) continue;
 
         const int camp = *(int *) ((uintptr_t) roomData + kCampOffset);
-        const int uid = *(int *) ((uintptr_t) roomData + kUidOffset);
+        uint64_t uid = *(uint64_t *) ((uintptr_t) roomData + kUidOffset);
+        if (uid == 0) {
+            uid = (uint64_t) (*(uint32_t *) ((uintptr_t) roomData + kUidOffset));
+        }
         const int zoneId = *(int *) ((uintptr_t) roomData + kZoneOffset);
         const int rankLevel = *(int *) ((uintptr_t) roomData + kRankOffset);
         const int heroId = *(int *) ((uintptr_t) roomData + kHeroOffset);
         const int spellId = *(int *) ((uintptr_t) roomData + kSpellOffset);
+        const int roomOrder = kRoomOrderOffset ? *(int *) ((uintptr_t) roomData + kRoomOrderOffset) : -1;
         auto *nameStr = *(String **) ((uintptr_t) roomData + kNameOffset);
 
         if (selfCamp != -1 && camp == selfCamp) continue;
+        if (selfCamp == -1 && roomOrder >= 0 && roomOrder < 5) continue;
         if (selfUid != 0 && uid == selfUid) continue;
 
         RoomEnemyInfoRow row{};
