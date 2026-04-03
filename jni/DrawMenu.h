@@ -259,6 +259,65 @@ inline bool ShouldShowGameplayTabs() {
     return selectedFeatures == 1 || selectedFeatures == 2;
 }
 
+struct RoomEnemyInfoRow {
+    std::string name;
+    std::string userId;
+    int camp = -1;
+};
+
+inline bool RefreshEnemyRoomInfo(std::vector<RoomEnemyInfoRow> &outRows, int &outBattleState) {
+    outRows.clear();
+    outBattleState = GetBattleState();
+
+    auto *roomPlayers = GetBattlePlayerInfo();
+    if (!roomPlayers || roomPlayers->getSize() <= 0) return false;
+
+    static uintptr_t kCampOffset = 0;
+    static uintptr_t kUidOffset = 0;
+    static uintptr_t kZoneOffset = 0;
+    static uintptr_t kNameOffset = 0;
+    if (!kCampOffset) kCampOffset = RoomData_iCamp();
+    if (!kUidOffset) kUidOffset = RoomData_lUid();
+    if (!kZoneOffset) kZoneOffset = RoomData_uiZoneId();
+    if (!kNameOffset) kNameOffset = RoomData_sName();
+    if (!kCampOffset || !kUidOffset || !kZoneOffset || !kNameOffset) return false;
+
+    void *selfUidBoxed = nullptr;
+    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "SystemData", "m_uiID", &selfUidBoxed);
+    const int selfUid = (int) (uintptr_t) selfUidBoxed;
+
+    int selfCamp = -1;
+    for (int i = 0; i < roomPlayers->getSize(); i++) {
+        auto roomData = roomPlayers->getItems()[i];
+        if (!roomData) continue;
+        const int uid = *(int *) ((uintptr_t) roomData + kUidOffset);
+        if (uid != selfUid) continue;
+        selfCamp = *(int *) ((uintptr_t) roomData + kCampOffset);
+        break;
+    }
+
+    for (int i = 0; i < roomPlayers->getSize(); i++) {
+        auto roomData = roomPlayers->getItems()[i];
+        if (!roomData) continue;
+
+        const int camp = *(int *) ((uintptr_t) roomData + kCampOffset);
+        const int uid = *(int *) ((uintptr_t) roomData + kUidOffset);
+        const int zoneId = *(int *) ((uintptr_t) roomData + kZoneOffset);
+        auto *nameStr = *(String **) ((uintptr_t) roomData + kNameOffset);
+
+        if (selfCamp != -1 && camp == selfCamp) continue;
+        if (selfUid != 0 && uid == selfUid) continue;
+
+        RoomEnemyInfoRow row{};
+        row.name = nameStr ? nameStr->toString() : "Unknown";
+        row.userId = std::to_string(uid) + " (" + std::to_string(zoneId) + ")";
+        row.camp = camp;
+        outRows.emplace_back(row);
+    }
+
+    return true;
+}
+
 void DrawMenu() {
 	const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
 	ImVec2 center = main_viewport->GetCenter();
@@ -542,6 +601,55 @@ void DrawMenu() {
                     ImGui::EndGroupPanel();
                 }
                 ImGui::EndGroupPanel();
+                ImGui::EndTabItem();
+            }
+
+            if (ImGui::BeginTabItem("Room Info")) {
+                static std::vector<RoomEnemyInfoRow> cachedEnemies;
+                static int cachedBattleState = 0;
+                static int lastRefreshFrame = -9999;
+                static bool hasSnapshot = false;
+
+                const int frameNow = ImGui::GetFrameCount();
+                const bool shouldAutoRefresh = (frameNow - lastRefreshFrame) >= 30;
+                if (!hasSnapshot || shouldAutoRefresh) {
+                    hasSnapshot = RefreshEnemyRoomInfo(cachedEnemies, cachedBattleState);
+                    lastRefreshFrame = frameNow;
+                }
+
+                if (ImGui::Button("Refresh Enemy Data", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
+                    hasSnapshot = RefreshEnemyRoomInfo(cachedEnemies, cachedBattleState);
+                    lastRefreshFrame = frameNow;
+                }
+
+                ImGui::Spacing();
+                ImGui::Text("Battle State: %d", cachedBattleState);
+                ImGui::Text("Enemy Count: %d", (int) cachedEnemies.size());
+                ImGui::Separator();
+
+                if (!hasSnapshot) {
+                    ImGui::TextColored(RGBA2ImVec4(255, 200, 0, 255), "No room data yet. Open this tab during matchmaking/draft.");
+                } else if (cachedEnemies.empty()) {
+                    ImGui::TextColored(RGBA2ImVec4(255, 200, 0, 255), "Room data available, but enemy side is not resolved yet.");
+                } else if (ImGui::BeginTable("EnemyRoomInfoTable", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp)) {
+                    ImGui::TableSetupColumn("#");
+                    ImGui::TableSetupColumn("Enemy Name");
+                    ImGui::TableSetupColumn("UID (Zone)");
+                    ImGui::TableSetupColumn("Camp");
+                    ImGui::TableHeadersRow();
+
+                    for (int i = 0; i < (int) cachedEnemies.size(); i++) {
+                        const auto &enemy = cachedEnemies[i];
+                        ImGui::TableNextRow();
+                        ImGui::TableSetColumnIndex(0); ImGui::Text("%d", i + 1);
+                        ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted(enemy.name.c_str());
+                        ImGui::TableSetColumnIndex(2); ImGui::TextUnformatted(enemy.userId.c_str());
+                        ImGui::TableSetColumnIndex(3); ImGui::Text("%d", enemy.camp);
+                    }
+
+                    ImGui::EndTable();
+                }
+
                 ImGui::EndTabItem();
             }
 			

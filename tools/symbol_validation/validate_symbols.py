@@ -41,6 +41,7 @@ METHOD_MODIFIERS = {
     "readonly",
     "final",
 }
+ACCESS_OR_ATTRIBUTE_PREFIXES = ("public", "private", "protected", "internal", "[")
 
 
 @dataclass
@@ -223,19 +224,24 @@ def parse_dump(dump_path: Path) -> Dict[str, ClassData]:
 
             if current_class_fqcn:
                 class_data = classes[current_class_fqcn]
+                stripped = line.lstrip()
+                has_decl_prefix = stripped.startswith(ACCESS_OR_ATTRIBUTE_PREFIXES)
 
-                method_signature = extract_method_signature(line)
-                if method_signature:
-                    method_name, args_blob = method_signature
-                    arg_count = parse_arg_count(args_blob)
-                    class_data.methods.setdefault(method_name, set()).add(arg_count)
-                    methods_detected += 1
+                if has_decl_prefix and "(" in line and ")" in line and ";" in line:
+                    method_signature = extract_method_signature(line)
+                    if method_signature:
+                        method_name, args_blob = method_signature
+                        arg_count = parse_arg_count(args_blob)
+                        class_data.methods.setdefault(method_name, set()).add(arg_count)
+                        methods_detected += 1
 
-                field_match = FIELD_DECL_RE.match(line)
-                if field_match:
-                    class_data.fields.add(field_match.group(1))
+                if has_decl_prefix and ";" in line and "(" not in line:
+                    field_match = FIELD_DECL_RE.match(line)
+                    if field_match:
+                        class_data.fields.add(field_match.group(1))
 
-                class_brace_depth += line.count("{") - line.count("}")
+                structural_line = line.split("//", 1)[0]
+                class_brace_depth += structural_line.count("{") - structural_line.count("}")
                 if class_brace_depth <= 0:
                     current_class_fqcn = None
                     class_brace_depth = 0
