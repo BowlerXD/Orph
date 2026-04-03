@@ -262,12 +262,27 @@ inline bool ShouldShowGameplayTabs() {
 struct RoomEnemyInfoRow {
     std::string name;
     std::string userId;
-    int camp = -1;
+    std::string rank;
+    std::string hero;
+    std::string spell;
 };
 
-inline bool RefreshEnemyRoomInfo(std::vector<RoomEnemyInfoRow> &outRows, int &outBattleState) {
+inline std::string RankLevelToString(int uiRankLevel) {
+    if (uiRankLevel <= 0) return "-";
+    if (uiRankLevel <= 11) return "Warrior";
+    if (uiRankLevel < 27) return "Elite";
+    if (uiRankLevel < 47) return "Master";
+    if (uiRankLevel < 77) return "Grandmaster";
+    if (uiRankLevel < 107) return "Epic";
+    if (uiRankLevel < 137) return "Legend";
+    if (uiRankLevel < 147) return "Mythic";
+    if (uiRankLevel < 157) return "Mythical Honor";
+    if (uiRankLevel < 177) return "Mythical Glory";
+    return "Mythical Immortal";
+}
+
+inline bool RefreshEnemyRoomInfo(std::vector<RoomEnemyInfoRow> &outRows) {
     outRows.clear();
-    outBattleState = GetBattleState();
 
     auto *roomPlayers = GetBattlePlayerInfo();
     if (!roomPlayers || roomPlayers->getSize() <= 0) return false;
@@ -276,11 +291,17 @@ inline bool RefreshEnemyRoomInfo(std::vector<RoomEnemyInfoRow> &outRows, int &ou
     static uintptr_t kUidOffset = 0;
     static uintptr_t kZoneOffset = 0;
     static uintptr_t kNameOffset = 0;
+    static uintptr_t kRankOffset = 0;
+    static uintptr_t kHeroOffset = 0;
+    static uintptr_t kSpellOffset = 0;
     if (!kCampOffset) kCampOffset = RoomData_iCamp();
     if (!kUidOffset) kUidOffset = RoomData_lUid();
     if (!kZoneOffset) kZoneOffset = RoomData_uiZoneId();
     if (!kNameOffset) kNameOffset = RoomData_sName();
-    if (!kCampOffset || !kUidOffset || !kZoneOffset || !kNameOffset) return false;
+    if (!kRankOffset) kRankOffset = RoomData_uiRankLevel();
+    if (!kHeroOffset) kHeroOffset = RoomData_heroid();
+    if (!kSpellOffset) kSpellOffset = RoomData_summonSkillId();
+    if (!kCampOffset || !kUidOffset || !kZoneOffset || !kNameOffset || !kRankOffset || !kHeroOffset || !kSpellOffset) return false;
 
     void *selfUidBoxed = nullptr;
     Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "SystemData", "m_uiID", &selfUidBoxed);
@@ -303,6 +324,9 @@ inline bool RefreshEnemyRoomInfo(std::vector<RoomEnemyInfoRow> &outRows, int &ou
         const int camp = *(int *) ((uintptr_t) roomData + kCampOffset);
         const int uid = *(int *) ((uintptr_t) roomData + kUidOffset);
         const int zoneId = *(int *) ((uintptr_t) roomData + kZoneOffset);
+        const int rankLevel = *(int *) ((uintptr_t) roomData + kRankOffset);
+        const int heroId = *(int *) ((uintptr_t) roomData + kHeroOffset);
+        const int spellId = *(int *) ((uintptr_t) roomData + kSpellOffset);
         auto *nameStr = *(String **) ((uintptr_t) roomData + kNameOffset);
 
         if (selfCamp != -1 && camp == selfCamp) continue;
@@ -311,7 +335,9 @@ inline bool RefreshEnemyRoomInfo(std::vector<RoomEnemyInfoRow> &outRows, int &ou
         RoomEnemyInfoRow row{};
         row.name = nameStr ? nameStr->toString() : "Unknown";
         row.userId = std::to_string(uid) + " (" + std::to_string(zoneId) + ")";
-        row.camp = camp;
+        row.rank = RankLevelToString(rankLevel) + " (" + std::to_string(rankLevel) + ")";
+        row.hero = HeroToString(heroId);
+        row.spell = SpellToString(spellId);
         outRows.emplace_back(row);
     }
 
@@ -606,24 +632,22 @@ void DrawMenu() {
 
             if (ImGui::BeginTabItem("Room Info")) {
                 static std::vector<RoomEnemyInfoRow> cachedEnemies;
-                static int cachedBattleState = 0;
                 static int lastRefreshFrame = -9999;
                 static bool hasSnapshot = false;
 
                 const int frameNow = ImGui::GetFrameCount();
                 const bool shouldAutoRefresh = (frameNow - lastRefreshFrame) >= 30;
                 if (!hasSnapshot || shouldAutoRefresh) {
-                    hasSnapshot = RefreshEnemyRoomInfo(cachedEnemies, cachedBattleState);
+                    hasSnapshot = RefreshEnemyRoomInfo(cachedEnemies);
                     lastRefreshFrame = frameNow;
                 }
 
                 if (ImGui::Button("Refresh Enemy Data", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
-                    hasSnapshot = RefreshEnemyRoomInfo(cachedEnemies, cachedBattleState);
+                    hasSnapshot = RefreshEnemyRoomInfo(cachedEnemies);
                     lastRefreshFrame = frameNow;
                 }
 
                 ImGui::Spacing();
-                ImGui::Text("Battle State: %d", cachedBattleState);
                 ImGui::Text("Enemy Count: %d", (int) cachedEnemies.size());
                 ImGui::Separator();
 
@@ -631,11 +655,13 @@ void DrawMenu() {
                     ImGui::TextColored(RGBA2ImVec4(255, 200, 0, 255), "No room data yet. Open this tab during matchmaking/draft.");
                 } else if (cachedEnemies.empty()) {
                     ImGui::TextColored(RGBA2ImVec4(255, 200, 0, 255), "Room data available, but enemy side is not resolved yet.");
-                } else if (ImGui::BeginTable("EnemyRoomInfoTable", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp)) {
+                } else if (ImGui::BeginTable("EnemyRoomInfoTable", 6, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp)) {
                     ImGui::TableSetupColumn("#");
                     ImGui::TableSetupColumn("Enemy Name");
                     ImGui::TableSetupColumn("UID (Zone)");
-                    ImGui::TableSetupColumn("Camp");
+                    ImGui::TableSetupColumn("Rank");
+                    ImGui::TableSetupColumn("Hero");
+                    ImGui::TableSetupColumn("Battle Spell");
                     ImGui::TableHeadersRow();
 
                     for (int i = 0; i < (int) cachedEnemies.size(); i++) {
@@ -644,7 +670,9 @@ void DrawMenu() {
                         ImGui::TableSetColumnIndex(0); ImGui::Text("%d", i + 1);
                         ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted(enemy.name.c_str());
                         ImGui::TableSetColumnIndex(2); ImGui::TextUnformatted(enemy.userId.c_str());
-                        ImGui::TableSetColumnIndex(3); ImGui::Text("%d", enemy.camp);
+                        ImGui::TableSetColumnIndex(3); ImGui::TextUnformatted(enemy.rank.c_str());
+                        ImGui::TableSetColumnIndex(4); ImGui::TextUnformatted(enemy.hero.c_str());
+                        ImGui::TableSetColumnIndex(5); ImGui::TextUnformatted(enemy.spell.c_str());
                     }
 
                     ImGui::EndTable();
