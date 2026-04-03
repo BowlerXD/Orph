@@ -284,6 +284,11 @@ inline std::string RankLevelToString(int uiRankLevel) {
     return "Mythical Immortal";
 }
 
+inline int RankLevelToStars(int uiRankLevel) {
+    if (uiRankLevel <= 136) return 0;
+    return uiRankLevel - 136;
+}
+
 inline bool RefreshEnemyRoomInfo(std::vector<RoomEnemyInfoRow> &outRows) {
     outRows.clear();
 
@@ -670,17 +675,24 @@ void DrawMenu() {
                         ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted(enemy.name.c_str());
                         ImGui::TableSetColumnIndex(2); ImGui::TextUnformatted(enemy.userId.c_str());
                         ImGui::TableSetColumnIndex(3);
-                        RoomInfoRank(enemy.rankLevel, 16.0f);
+                        RoomInfoRank(enemy.rankLevel, 24.0f);
+                        ImGui::SameLine();
+                        const int stars = RankLevelToStars(enemy.rankLevel);
+                        if (stars > 0) {
+                            ImGui::TextColored(RGBA2ImVec4(255, 215, 0, 255), ICON_FA_STAR " %d", stars);
+                        } else {
+                            ImGui::TextUnformatted("-");
+                        }
                         if (ImGui::IsItemHovered()) {
                             ImGui::SetTooltip("%s", enemy.rank.c_str());
                         }
                         ImGui::TableSetColumnIndex(4);
-                        RoomInfoHero(enemy.heroId, 16.0f);
+                        RoomInfoHero(enemy.heroId, 24.0f);
                         if (ImGui::IsItemHovered()) {
                             ImGui::SetTooltip("%s", enemy.hero.c_str());
                         }
                         ImGui::TableSetColumnIndex(5);
-                        RoomInfoSpell(enemy.spellId, 16.0f);
+                        RoomInfoSpell(enemy.spellId, 24.0f);
                         if (ImGui::IsItemHovered()) {
                             ImGui::SetTooltip("%s", enemy.spell.c_str());
                         }
