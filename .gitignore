@@ -20,3 +20,6 @@ obj/local/**/libAkSoundEngine2.so
 
 # Official release artifacts are kept only under libs/<abi>/
 # (do not ignore libs/** by default)
+
+# Local packaged archives (upload via Releases, not via PR)
+orph_vixed_vibe.zip

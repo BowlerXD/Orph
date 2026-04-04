@@ -104,7 +104,12 @@ static inline bool IsSafeMatchRunning(void *battleBridgeInstance, void *battleMa
 
     // Start trigger (most reliable in runtime):
     // local player show object exists.
-    auto localPlayerShow = *(uintptr_t *) ((uintptr_t) battleManagerInstance + BattleManager_m_LocalPlayerShow());
+    auto localPlayerOffset = BattleManager_m_LocalPlayerShow();
+    if (!localPlayerOffset || localPlayerOffset == (uintptr_t)-1) {
+        stableActiveFrames = 0;
+        return false;
+    }
+    auto localPlayerShow = *(uintptr_t *) ((uintptr_t) battleManagerInstance + localPlayerOffset);
     bool hasLocalPlayer = (localPlayerShow != 0);
     if (!hasLocalPlayer) {
         stableActiveFrames = 0;

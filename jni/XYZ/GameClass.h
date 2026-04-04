@@ -391,7 +391,41 @@ uintptr_t BattleBridge_ShowHeadEquip(){
 }
 
 uintptr_t BattleBridge_bStartBattle(){
-	return (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "BattleBridge", "bStartBattle");
+    static uintptr_t fieldOffset = 0;
+    static bool resolved = false;
+    if (!resolved) {
+        fieldOffset = (uintptr_t) Il2CppGetFieldOffset("Assembly-CSharp.dll", "", "BattleBridge", "bStartBattle");
+        if (fieldOffset == (uintptr_t)-1) {
+            fieldOffset = 0;
+        }
+        resolved = true;
+    }
+	return fieldOffset;
+}
+
+uintptr_t BattleBridge_get_bStartBattle() {
+    static uintptr_t method = 0;
+    static bool resolved = false;
+    if (!resolved) {
+        method = (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "BattleBridge", "get_bStartBattle", 0);
+        resolved = true;
+    }
+    return method;
+}
+
+inline bool BattleBridge_IsStartBattle(void *battleBridgeInstance) {
+    if (!battleBridgeInstance) return false;
+
+    auto startBattleField = BattleBridge_bStartBattle();
+    if (startBattleField && startBattleField != (uintptr_t)-1) {
+        return *(bool *)((uintptr_t) battleBridgeInstance + startBattleField);
+    }
+
+    auto startBattleGetter = BattleBridge_get_bStartBattle();
+    if (startBattleGetter) {
+        return reinterpret_cast<bool (*)(void *)>(startBattleGetter)(battleBridgeInstance);
+    }
+    return false;
 }
 
 // Maphack runtime bridge methods
@@ -628,16 +662,30 @@ Vector3 WorldToScreen(Vector3 position) {
     return reinterpret_cast<Vector3(__fastcall *)(void *, Vector3)>(Camera_WorldToScreenPoint())(get_main(), position);
 }
 
+inline void *GetLogicBattleManagerInstance() {
+    void *instance = nullptr;
+    Il2CppGetStaticFieldValue("Assembly-CSharp.dll", "", "LogicBattleManager", "Instance", &instance);
+    if (instance) return instance;
+
+    auto instOffset = LogicBattleManager_Instan();
+    if (!instOffset || instOffset == (uintptr_t)-1) return nullptr;
+    return *(void **) instOffset;
+}
+
 int GetBattleState() {
-	auto instance = *(uintptr_t *) ((uintptr_t)LogicBattleManager_Instan());
+    auto instance = GetLogicBattleManagerInstance();
     if (!instance) return 0;
-    return reinterpret_cast<int(__fastcall *)(void*)>(LogicBattleManager_GetBattleState())((void*)instance);
+    auto fn = reinterpret_cast<int(__fastcall *)(void*)>(LogicBattleManager_GetBattleState());
+    if (!fn) return 0;
+    return fn(instance);
 }
 
 uintptr_t GetPlayerLogic(uint id) {
-    auto instance = *(uintptr_t *) ((uintptr_t)LogicBattleManager_Instan());
+    auto instance = GetLogicBattleManagerInstance();
     if (!instance) return 0;
-    return reinterpret_cast<uintptr_t(__fastcall *)(void *, uint)>(LogicBattleManager_GetPlayerLogic())((void *)instance, id);
+    auto fn = reinterpret_cast<uintptr_t(__fastcall *)(void *, uint)>(LogicBattleManager_GetPlayerLogic());
+    if (!fn) return 0;
+    return fn(instance, id);
 }
 
 int GetCoolTime(void* instance) {
@@ -703,7 +751,14 @@ Dictionary<void*, void*> *get_Monsters(){
 #define ShowEntityUpdateEyeLayer (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowEntity","UpdateEyeLayer", 3)
 #define ShowEntity_InitSetEye (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ShowEntity","InitSetEye", 2)
 
-#define BattleBridge_OnSignReport (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "BattleBridge", "OnSignReport", 8)
+inline uintptr_t ResolveBattleBridge_OnSignReport() {
+    uintptr_t method = (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "BattleBridge", "OnSignReportData", 8);
+    if (!method) {
+        method = (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "BattleBridge", "OnSignReport", 8);
+    }
+    return method;
+}
+#define BattleBridge_OnSignReport ResolveBattleBridge_OnSignReport()
 #define BattleBridge_SafeSendGameReportData (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "BattleBridge", "SafeSendGameReportData", 1)
 #define BattleBridge_SendGameReportData (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "BattleBridge", "SendGameReportData", 1)
 #define BattleBridge_SendLargeGameReportData (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "BattleBridge", "SendLargeGameReportData", 1)
@@ -727,7 +782,14 @@ Dictionary<void*, void*> *get_Monsters(){
 #define ACInterface_GetSystemTime (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ACInterface", "GetSystemTime", 2)
 #define ACInterface_EstimateGetTimeOfDay (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ACInterface", "EstimateGetTimeOfDay", 1)
 #define ACInterface_EstimateGetSystemTime (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ACInterface", "EstimateGetSystemTime", 1)
-#define ACInterface_LoadCert (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ACInterface", "LoadCert", 2)
+inline uintptr_t ResolveACInterface_LoadCert() {
+    uintptr_t method = (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ACInterface", "LFXW", 2);
+    if (!method) {
+        method = (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ACInterface", "LoadCert", 2);
+    }
+    return method;
+}
+#define ACInterface_LoadCert ResolveACInterface_LoadCert()
 #define ACInterface_GetSign (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ACInterface", "GetSign")
 #define ACInterface_ValidateCer (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ACInterface", "ValidateCer", 1)
 #define ACInterface_GetSignMapData (uintptr_t) Il2CppGetMethodOffset("Assembly-CSharp.dll", "", "ACInterface", "GetSignMapData")
